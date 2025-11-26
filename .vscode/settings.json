@@ -1,0 +1,4 @@
+{
+    "chat.agent.maxRequests": 1000,
+    "postman.settings.dotenv-detection-notification-visibility": false
+}
