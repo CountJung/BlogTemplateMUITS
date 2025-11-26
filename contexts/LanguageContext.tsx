@@ -28,35 +28,16 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, in
   const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   useEffect(() => {
-    // Fetch initial language from server settings
-    const fetchLanguage = async () => {
-      try {
-        const response = await fetch('/api/settings/language');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.language) {
-            setLanguageState(data.language);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch language setting', error);
-      }
-    };
-    fetchLanguage();
+    // Load language from localStorage on client side
+    const savedLanguage = localStorage.getItem('language') as Language;
+    if (savedLanguage && (savedLanguage === 'ko' || savedLanguage === 'en')) {
+      setLanguageState(savedLanguage);
+    }
   }, []);
 
-  const setLanguage = async (lang: Language) => {
+  const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    // API call to save to env
-    try {
-      await fetch('/api/settings/language', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang }),
-      });
-    } catch (error) {
-      console.error('Failed to save language setting', error);
-    }
+    localStorage.setItem('language', lang);
   };
 
   const t = (key: string, params?: Record<string, string | number>): string => {

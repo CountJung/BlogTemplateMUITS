@@ -168,6 +168,17 @@ export interface Translations {
       languageHelp: string;
       korean: string;
       english: string;
+      systemSettings: string;
+      logRetentionDays: string;
+      logRetentionDaysHelp: string;
+      schedulerConfiguration: string;
+      schedulerHelp: string;
+      hour: string;
+      minute: string;
+      second: string;
+      saveSettings: string;
+      settingsSaved: string;
+      settingsFailed: string;
     };
   };
 }

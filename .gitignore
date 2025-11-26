@@ -31,6 +31,10 @@ yarn-error.log*
 .env.production.local
 .env*.local
 
+#logs
+/logs
+*.log
+
 # Vercel
 .vercel
 

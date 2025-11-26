@@ -27,6 +27,7 @@ import {
   Login as LoginIcon,
   Logout as LogoutIcon,
   AccountCircle as AccountIcon,
+  Translate as TranslateIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -46,7 +47,7 @@ const Header: React.FC = () => {
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -54,6 +55,10 @@ const Header: React.FC = () => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'ko' ? 'en' : 'ko');
   };
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -87,15 +92,11 @@ const Header: React.FC = () => {
     // 관리자 권한이 있는 경우에만 관리 메뉴 표시
     if ((session as any).isAdmin) {
       menuItems.push({ label: t('admin'), href: '/admin', icon: <AccountIcon /> });
+    menuItems.push({ label: t('settings'), href: '/settings', icon: <SettingsIcon /> });
     }
   } else {
     menuItems.push({ label: t('login'), href: '/auth/login', icon: <LoginIcon /> });
   }
-
-  // 설정 메뉴 추가 (로그인하지 않은 경우에만 상단 메뉴에 표시) - 그냥 상시로 표시
-  // if (!session) {
-    menuItems.push({ label: t('settings'), href: '/settings', icon: <SettingsIcon /> });
-  // }
 
   const isActive = (href: string): boolean => router.pathname === href;
 
@@ -114,6 +115,11 @@ const Header: React.FC = () => {
 
         {isMobile ? (
           <>
+            <Tooltip title={language === 'ko' ? 'Switch to English' : '한국어로 변경'}>
+              <IconButton color="inherit" onClick={toggleLanguage}>
+                <TranslateIcon />
+              </IconButton>
+            </Tooltip>
             {/* 모바일 테마 스위처 */}
             <ThemeSwitcher />
             
@@ -242,6 +248,11 @@ const Header: React.FC = () => {
             ))}
             
             {/* 데스크톱 테마 스위처 */}
+            <Tooltip title={language === 'ko' ? 'Switch to English' : '한국어로 변경'}>
+              <IconButton color="inherit" onClick={toggleLanguage}>
+                <TranslateIcon />
+              </IconButton>
+            </Tooltip>
             <ThemeSwitcher />
             
             {session && (
