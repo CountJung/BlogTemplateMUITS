@@ -1,11 +1,11 @@
-import cron from 'node-cron';
+import { CronJob } from 'cron';
 import fs from 'fs';
 import path from 'path';
 import { getSystemSettings } from './settings';
 
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
-let currentTask: ReturnType<typeof cron.schedule> | null = null;
+let currentTask: CronJob | null = null;
 
 export const initScheduler = () => {
   const settings = getSystemSettings();
@@ -43,52 +43,57 @@ export const initScheduler = () => {
   console.log(`Initializing scheduler with cron: "${cronExpression}" (Settings: H=${hour}, M=${minute}, S=${second})`);
 
   // Schedule task
-  currentTask = cron.schedule(cronExpression, () => {
-    console.log('Running log cleanup scheduler...');
-    
-    if (!fs.existsSync(LOG_DIR)) {
-      return;
-    }
-
-    // Read settings again to get the latest retention days
-    const currentSettings = getSystemSettings();
-    const retentionMs = currentSettings.logRetentionDays * 24 * 60 * 60 * 1000;
-
-    fs.readdir(LOG_DIR, (err, files) => {
-      if (err) {
-        console.error('Error reading log directory:', err);
+  try {
+    currentTask = new CronJob(cronExpression, () => {
+      console.log('Running log cleanup scheduler...');
+      
+      if (!fs.existsSync(LOG_DIR)) {
         return;
       }
 
-      const now = Date.now();
+      // Read settings again to get the latest retention days
+      const currentSettings = getSystemSettings();
+      const retentionMs = currentSettings.logRetentionDays * 24 * 60 * 60 * 1000;
 
-      files.forEach(file => {
-        const filePath = path.join(LOG_DIR, file);
-        
-        // Only process log files
-        if (!file.endsWith('.log') && !file.endsWith('.log.gz')) {
-            return;
+      fs.readdir(LOG_DIR, (err, files) => {
+        if (err) {
+          console.error('Error reading log directory:', err);
+          return;
         }
 
-        fs.stat(filePath, (err, stats) => {
-          if (err) {
-            console.error(`Error getting stats for file ${file}:`, err);
-            return;
+        const now = Date.now();
+
+        files.forEach(file => {
+          const filePath = path.join(LOG_DIR, file);
+          
+          // Only process log files
+          if (!file.endsWith('.log') && !file.endsWith('.log.gz')) {
+              return;
           }
 
-          if (now - stats.mtimeMs > retentionMs) {
-            fs.unlink(filePath, (err) => {
-              if (err) {
-                console.error(`Error deleting file ${file}:`, err);
-              } else {
-                console.log(`Deleted old log file: ${file}`);
-              }
-            });
-          }
+          fs.stat(filePath, (err, stats) => {
+            if (err) {
+              console.error(`Error getting stats for file ${file}:`, err);
+              return;
+            }
+
+            if (now - stats.mtimeMs > retentionMs) {
+              fs.unlink(filePath, (err) => {
+                if (err) {
+                  console.error(`Error deleting file ${file}:`, err);
+                } else {
+                  console.log(`Deleted old log file: ${file}`);
+                }
+              });
+            }
+          });
         });
       });
     });
-  });
-  
-  console.log('Log cleanup scheduler initialized.');
+    
+    currentTask.start();
+    console.log('Log cleanup scheduler initialized.');
+  } catch (e) {
+    console.error('Failed to start scheduler:', e);
+  }
 };
