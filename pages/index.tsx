@@ -14,9 +14,6 @@ import {
   Tooltip,
   Pagination,
   Stack,
-  Fab,
-  Zoom,
-  useScrollTrigger,
 } from '@mui/material';
 import {
   CalendarToday as DateIcon,
@@ -24,7 +21,6 @@ import {
   Visibility as ViewIcon,
   Search as SearchIcon,
   Delete as DeleteIcon,
-  KeyboardArrowUp as KeyboardArrowUpIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -32,6 +28,7 @@ import { useRouter } from 'next/router';
 import { getPaginatedPosts, getAllPosts } from '../lib/posts';
 import { HomePageProps, BlogPost } from '../types/blog';
 import { useLanguage } from '../contexts/LanguageContext';
+import ScrollToTop from '../components/ScrollToTop';
 
 const HomePage: NextPage<HomePageProps> = ({ 
   posts: allPosts, // 전체 게시글 (검색용)
@@ -46,19 +43,6 @@ const HomePage: NextPage<HomePageProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [filteredPage, setFilteredPage] = useState<number>(1);
-  
-  // 스크롤 트리거 (맨 위로 가기 버튼용)
-  const trigger = useScrollTrigger({
-    disableHysteresis: true,
-    threshold: 100,
-  });
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
   
   // 삭제 권한 확인 함수 (Admin은 모든 글, Writer는 자신의 글만)
   const canDeletePost = (post: BlogPost): boolean => {
@@ -312,17 +296,7 @@ const HomePage: NextPage<HomePageProps> = ({
       )}
 
       {/* 맨 위로 가기 버튼 */}
-      <Zoom in={trigger}>
-        <Box
-          onClick={scrollToTop}
-          role="presentation"
-          sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1000 }}
-        >
-          <Fab color="primary" size="medium" aria-label="scroll back to top">
-            <KeyboardArrowUpIcon />
-          </Fab>
-        </Box>
-      </Zoom>
+      <ScrollToTop />
     </Box>
   );
 };

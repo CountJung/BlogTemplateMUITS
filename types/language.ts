@@ -180,5 +180,17 @@ export interface Translations {
       settingsSaved: string;
       settingsFailed: string;
     };
+    adminLogs: {
+      title: string;
+      noLogs: string;
+      selectLog: string;
+      refresh: string;
+      fileName: string;
+      size: string;
+      lastModified: string;
+      loading: string;
+      error: string;
+      fileNotFound: string;
+    };
   };
 }

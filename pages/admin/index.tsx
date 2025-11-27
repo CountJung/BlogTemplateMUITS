@@ -38,6 +38,7 @@ import {
   Create as WriterIcon,
   Visibility as ReaderIcon,
   Block as BannedIcon,
+  Description as LogIcon,
 } from '@mui/icons-material';
 import { User } from '../../types/user';
 import { UserRole } from '../../types/roles';
@@ -225,6 +226,13 @@ const AdminPage: NextPage = () => {
           {t('userManagement')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<LogIcon />}
+            onClick={() => router.push('/admin/logs')}
+          >
+            {t('adminLogs.title')}
+          </Button>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}

@@ -24,6 +24,7 @@ import rehypeHighlight from 'rehype-highlight';
 import { CreatePostPageState, FileAttachment } from '../../types/blog';
 import FileUploader from '../../components/FileUploader';
 import { useLanguage } from '../../contexts/LanguageContext';
+import ScrollToTop from '../../components/ScrollToTop';
 
 const CreatePostPage: NextPage = () => {
   const { t } = useLanguage();
@@ -339,6 +340,9 @@ const CreatePostPage: NextPage = () => {
           </Box>
         )}
       </Box>
+
+      {/* 맨 위로 가기 버튼 */}
+      <ScrollToTop />
     </Box>
   );
 };

@@ -180,5 +180,17 @@ export const en: Translations = {
       settingsSaved: 'Settings saved successfully',
       settingsFailed: 'Failed to save settings',
     },
+    adminLogs: {
+      title: 'System Logs',
+      noLogs: 'No log files found.',
+      selectLog: 'Select a log file to view its content.',
+      refresh: 'Refresh',
+      fileName: 'File Name',
+      size: 'Size',
+      lastModified: 'Last Modified',
+      loading: 'Loading log content...',
+      error: 'Failed to load log content.',
+      fileNotFound: 'Log file not found (it might have been deleted).',
+    },
   },
 };

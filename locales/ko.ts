@@ -180,5 +180,17 @@ export const ko: Translations = {
       settingsSaved: '설정이 성공적으로 저장되었습니다',
       settingsFailed: '설정 저장에 실패했습니다',
     },
+    adminLogs: {
+      title: '시스템 로그',
+      noLogs: '로그 파일이 없습니다.',
+      selectLog: '내용을 보려면 로그 파일을 선택하세요.',
+      refresh: '새로고침',
+      fileName: '파일명',
+      size: '크기',
+      lastModified: '수정일',
+      loading: '로그 내용을 불러오는 중...',
+      error: '로그 내용을 불러오는데 실패했습니다.',
+      fileNotFound: '로그 파일을 찾을 수 없습니다 (삭제되었을 수 있습니다).',
+    },
   },
 };

@@ -35,6 +35,7 @@ import { getAllPostIds, getPostById } from '../../lib/posts';
 import { BlogDetailPageProps } from '../../types/blog';
 import Comments from '../../components/Comments';
 import { useLanguage } from '../../contexts/LanguageContext';
+import ScrollToTop from '../../components/ScrollToTop';
 import 'highlight.js/styles/github-dark.css';
 
 const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
@@ -554,6 +555,9 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 맨 위로 가기 버튼 */}
+      <ScrollToTop />
     </Box>
   );
 };

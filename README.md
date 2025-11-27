@@ -178,3 +178,19 @@ MIT
 ## 🤝 기여
 
 이슈와 풀 리퀘스트를 환영합니다!
+
+## 📝 개발 지침 (Development Guidelines)
+
+### 🌐 다국어 지원 (i18n)
+
+이 프로젝트는 한국어(`ko`)와 영어(`en`)를 지원합니다. 새로운 기능을 개발하거나 UI를 수정할 때는 반드시 다국어 지원을 고려해야 합니다.
+
+1.  **하드코딩 금지**: UI에 표시되는 모든 텍스트는 하드코딩하지 말고 `locales/ko.ts`와 `locales/en.ts`에 정의된 키를 사용하세요.
+2.  **키 구조**: 관련된 키들은 중첩 객체로 그룹화하여 관리하세요 (예: `settingsPage.systemSettings`).
+3.  **타입 정의**: 새로운 키를 추가할 때는 `types/language.ts`의 `Translations` 인터페이스도 함께 업데이트해야 합니다.
+4.  **사용법**: 컴포넌트에서 `useLanguage` 훅을 사용하여 텍스트를 불러오세요.
+    ```tsx
+    const { t } = useLanguage();
+    // ...
+    <Typography>{t('settingsPage.systemSettings')}</Typography>
+    ```

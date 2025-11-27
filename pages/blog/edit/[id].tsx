@@ -26,6 +26,7 @@ import { getPostById } from '../../../lib/posts';
 import { BlogPost, FileAttachment } from '../../../types/blog';
 import FileUploader from '../../../components/FileUploader';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import ScrollToTop from '../../../components/ScrollToTop';
 import 'highlight.js/styles/github-dark.css';
 
 interface EditPostPageProps {
@@ -370,6 +371,9 @@ const EditPostPage: NextPage<EditPostPageProps> = ({ post }) => {
             </Paper>
         )}
       </Box>
+
+      {/* 맨 위로 가기 버튼 */}
+      <ScrollToTop />
     </Box>
   );
 };
