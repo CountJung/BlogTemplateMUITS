@@ -9,6 +9,7 @@ export interface Translations {
     write: string;
     edit: string;
     delete: string;
+    print: string;
     save: string;
     cancel: string;
     confirm: string;

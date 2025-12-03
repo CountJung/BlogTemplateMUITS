@@ -9,6 +9,7 @@ export const ko: Translations = {
     write: '글쓰기',
     edit: '수정',
     delete: '삭제',
+    print: '인쇄',
     save: '저장',
     cancel: '취소',
     confirm: '확인',

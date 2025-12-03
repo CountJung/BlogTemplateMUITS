@@ -23,6 +23,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   Attachment as AttachmentIcon,
+  Print as PrintIcon,
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import Link from 'next/link';
@@ -141,6 +142,10 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
       setDeleteDialogOpen(false);
     }
   };
+
+  const handlePrint = () => {
+    window.print();
+  };
   
   if (!post) {
     return (
@@ -168,7 +173,7 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
         </Alert>
       )}
       
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, displayPrint: 'none' }}>
         <Button
           component={Link}
           href="/blog"
@@ -178,6 +183,13 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
         </Button>
         
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+          >
+            {t('print') || 'Print'}
+          </Button>
           {canEdit && (
             <Button
               component={Link}
@@ -522,7 +534,9 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
       </Paper>
 
       {/* 댓글 섹션 */}
-      <Comments postId={post.id} postAuthorEmail={post.authorEmail || ''} />
+      <Box sx={{ displayPrint: 'none' }}>
+        <Comments postId={post.id} postAuthorEmail={post.authorEmail || ''} />
+      </Box>
       
       {/* 삭제 확인 다이얼로그 */}
       <Dialog
@@ -557,7 +571,9 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
       </Dialog>
 
       {/* 맨 위로 가기 버튼 */}
-      <ScrollToTop />
+      <Box sx={{ displayPrint: 'none' }}>
+        <ScrollToTop />
+      </Box>
     </Box>
   );
 };

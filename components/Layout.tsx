@@ -342,7 +342,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         minHeight: '100vh',
       }}
     >
-      <Header />
+      <Box sx={{ displayPrint: 'none' }}>
+        <Header />
+      </Box>
       <Container
         component="main"
         maxWidth="lg"
@@ -354,8 +356,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       >
         {children}
       </Container>
-      <Footer />
-      <ResponsiveDebugger />
+      <Box sx={{ displayPrint: 'none' }}>
+        <Footer />
+      </Box>
+      <Box sx={{ displayPrint: 'none' }}>
+        <ResponsiveDebugger />
+      </Box>
     </Box>
   );
 };
