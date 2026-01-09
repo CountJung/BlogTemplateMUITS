@@ -287,7 +287,8 @@ const EditPostPage: NextPage<EditPostPageProps> = ({ post }) => {
               onAttachmentsChange={(attachments: FileAttachment[]) => 
                 setFormData(prev => ({ ...prev, attachments }))
               }
-              maxFiles={5}
+              postDate={post.date}
+              maxFiles={1000}
             />
 
             <Box sx={{ display: 'flex', gap: 2 }}>

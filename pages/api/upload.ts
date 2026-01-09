@@ -13,9 +13,17 @@ export const config = {
 };
 
 // 업로드 디렉토리 생성
-const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadBaseDir = path.join(process.cwd(), 'public', 'uploads');
+if (!fs.existsSync(uploadBaseDir)) {
+  fs.mkdirSync(uploadBaseDir, { recursive: true });
+}
+
+function normalizePostDate(input: unknown): { year: string; month: string; day: string } {
+  const today = new Date().toISOString().split('T')[0];
+  const raw = typeof input === 'string' ? input : Array.isArray(input) ? String(input[0] ?? '') : '';
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today;
+  const [year, month, day] = date.split('-');
+  return { year, month, day };
 }
 
 // 허용된 파일 타입 및 최대 크기 설정
@@ -66,7 +74,7 @@ export default async function handler(
     }
 
     const form = new IncomingForm({
-      uploadDir,
+      uploadDir: uploadBaseDir,
       keepExtensions: true,
       maxFileSize: MAX_FILE_SIZE,
       multiples: false, // 한 번에 하나씩 업로드
@@ -111,7 +119,15 @@ export default async function handler(
     const originalName = uploadedFile.originalFilename || 'file';
     const ext = path.extname(originalName);
     const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_')}`;
-    const newPath = path.join(uploadDir, safeName);
+
+    const { year, month, day } = normalizePostDate((data.fields as any)?.postDate);
+    const datedDir = path.join(uploadBaseDir, year, month, day);
+    if (!fs.existsSync(datedDir)) {
+      fs.mkdirSync(datedDir, { recursive: true });
+    }
+
+    const relativePath = path.posix.join(year, month, day, safeName);
+    const newPath = path.join(datedDir, safeName);
 
     // 파일 이동
     fs.renameSync(uploadedFile.filepath, newPath);
@@ -120,8 +136,8 @@ export default async function handler(
     const fileData = {
       filename: safeName,
       originalName: originalName,
-      url: `/api/files/${safeName}`, // API 경로로 변경
-      downloadUrl: `/api/files/${safeName}?download=true`, // 다운로드 전용 URL
+      url: `/api/files/${relativePath}`, // API 경로로 변경
+      downloadUrl: `/api/files/${relativePath}?download=true`, // 다운로드 전용 URL
       size: uploadedFile.size,
       mimeType: uploadedFile.mimetype,
       uploadedAt: new Date().toISOString(),

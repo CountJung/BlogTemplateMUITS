@@ -287,19 +287,38 @@ export function deletePost(id: string): PostSaveResult {
     // 첨부파일이 있으면 삭제
     if (post && post.attachments && post.attachments.length > 0) {
       const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      const uploadsDirResolved = path.resolve(uploadsDir);
       
       post.attachments.forEach(attachment => {
         try {
-          // URL에서 파일명 추출 (/uploads/filename.ext -> filename.ext)
-          const filename = attachment.filename || attachment.url.split('/').pop();
-          if (filename) {
-            const filePath = path.join(uploadsDir, filename);
-            
-            // 파일이 존재하면 삭제
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-              console.log(`Deleted attachment: ${filename}`);
+          // url: /api/files/<relativePath>
+          let relativePath = '';
+          if (typeof attachment.url === 'string') {
+            const marker = '/api/files/';
+            const idx = attachment.url.indexOf(marker);
+            if (idx >= 0) {
+              relativePath = attachment.url.slice(idx + marker.length);
             }
+          }
+
+          // 호환성: 예전(flat) 구조는 filename만 있을 수 있음
+          if (!relativePath && attachment.filename) {
+            relativePath = attachment.filename;
+          }
+
+          relativePath = relativePath.replace(/^\/+/, '');
+          if (!relativePath) {
+            return;
+          }
+
+          const filePathResolved = path.resolve(uploadsDirResolved, ...relativePath.split('/'));
+          if (!filePathResolved.startsWith(uploadsDirResolved + path.sep)) {
+            return;
+          }
+
+          if (fs.existsSync(filePathResolved)) {
+            fs.unlinkSync(filePathResolved);
+            console.log(`Deleted attachment: ${relativePath}`);
           }
         } catch (fileError) {
           console.error(`Error deleting attachment file:`, fileError);

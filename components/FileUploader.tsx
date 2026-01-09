@@ -28,12 +28,14 @@ interface FileUploaderProps {
   attachments: FileAttachment[];
   onAttachmentsChange: (attachments: FileAttachment[]) => void;
   maxFiles?: number;
+  postDate?: string; // YYYY-MM-DD (포스트 날짜 기반 업로드 폴더 분리)
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
   attachments,
   onAttachmentsChange,
-  maxFiles = 5,
+  maxFiles = 1000,
+  postDate,
 }) => {
   const { t, language } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
@@ -60,6 +62,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const uploadFile = async (file: File): Promise<FileAttachment | null> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (postDate) {
+      formData.append('postDate', postDate);
+    }
 
     try {
       const response = await fetch('/api/upload', {

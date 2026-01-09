@@ -262,7 +262,8 @@ const CreatePostPage: NextPage = () => {
               onAttachmentsChange={(attachments: FileAttachment[]) => 
                 setFormData(prev => ({ ...prev, attachments }))
               }
-              maxFiles={5}
+              postDate={new Date().toISOString().split('T')[0]}
+              maxFiles={1000}
             />
 
             <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>

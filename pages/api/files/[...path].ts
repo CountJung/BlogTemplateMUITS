@@ -22,11 +22,11 @@ export default async function handler(
 
     // 경로 조합
     const fileName = filePath.join('/');
-    const fullPath = path.join(process.cwd(), 'public', 'uploads', fileName);
+    const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
+    const fullPath = path.resolve(uploadsDir, ...fileName.split('/'));
 
     // 보안: uploads 디렉토리 밖으로 나가는 것 방지
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fullPath.startsWith(uploadsDir)) {
+    if (!fullPath.startsWith(uploadsDir + path.sep)) {
       return res.status(403).json({ message: '허용되지 않은 경로입니다.' });
     }
 
