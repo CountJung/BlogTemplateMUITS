@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth/[...nextauth]';
+import { getClientIp, logAction } from '../../lib/logger';
 
 // 파일 업로드 설정
 export const config = {
@@ -64,12 +65,31 @@ export default async function handler(
   try {
     // 로그인 확인
     const session = await getServerSession(req, res, authOptions);
+    const ip = getClientIp(req);
+    const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
     if (!session?.user?.email) {
+      logAction({
+        action: 'file.upload',
+        outcome: 'denied',
+        ip,
+        userAgent,
+        target: { type: 'file' },
+        error: 'unauthenticated',
+      });
       return res.status(401).json({ message: '로그인이 필요합니다.' });
     }
 
     // 글쓰기 권한 확인
     if (!session.permissions?.canWrite) {
+      logAction({
+        action: 'file.upload',
+        outcome: 'denied',
+        actor: { email: session.user.email, name: session.user.name || null, role: String((session as any).userRole || '') },
+        ip,
+        userAgent,
+        target: { type: 'file' },
+        error: 'insufficient_permissions',
+      });
       return res.status(403).json({ message: '파일 업로드 권한이 없습니다.' });
     }
 
@@ -100,6 +120,19 @@ export default async function handler(
     if (!uploadedFile.mimetype || !ALLOWED_TYPES.includes(uploadedFile.mimetype)) {
       // 업로드된 파일 삭제
       fs.unlinkSync(uploadedFile.filepath);
+      logAction({
+        action: 'file.upload',
+        outcome: 'denied',
+        actor: { email: session.user.email, name: session.user.name || null },
+        ip,
+        userAgent,
+        target: { type: 'file' },
+        error: 'disallowed_mime_type',
+        meta: {
+          mimeType: uploadedFile.mimetype,
+          originalName: uploadedFile.originalFilename,
+        },
+      });
       return res.status(400).json({ 
         message: '허용되지 않는 파일 형식입니다.',
         allowedTypes: ALLOWED_TYPES 
@@ -109,6 +142,20 @@ export default async function handler(
     // 파일 크기 검증
     if (uploadedFile.size > MAX_FILE_SIZE) {
       fs.unlinkSync(uploadedFile.filepath);
+      logAction({
+        action: 'file.upload',
+        outcome: 'denied',
+        actor: { email: session.user.email, name: session.user.name || null },
+        ip,
+        userAgent,
+        target: { type: 'file' },
+        error: 'file_too_large',
+        meta: {
+          size: uploadedFile.size,
+          maxSize: MAX_FILE_SIZE,
+          originalName: uploadedFile.originalFilename,
+        },
+      });
       return res.status(400).json({ 
         message: `파일 크기는 ${MAX_FILE_SIZE / 1024 / 1024}MB를 초과할 수 없습니다.` 
       });
@@ -143,6 +190,21 @@ export default async function handler(
       uploadedAt: new Date().toISOString(),
     };
 
+    logAction({
+      action: 'file.upload',
+      outcome: 'success',
+      actor: { email: session.user.email, name: session.user.name || null, role: String((session as any).userRole || '') },
+      ip,
+      userAgent,
+      target: { type: 'file', id: relativePath },
+      meta: {
+        originalName,
+        mimeType: uploadedFile.mimetype,
+        size: uploadedFile.size,
+        postDate: (data.fields as any)?.postDate,
+      },
+    });
+
     return res.status(200).json({
       message: '파일이 성공적으로 업로드되었습니다.',
       file: fileData,
@@ -150,6 +212,18 @@ export default async function handler(
 
   } catch (error) {
     console.error('File upload error:', error);
+    try {
+      logAction({
+        action: 'file.upload',
+        outcome: 'error',
+        ip: getClientIp(req),
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
+        target: { type: 'file' },
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } catch {
+      // no-op
+    }
     return res.status(500).json({ 
       message: '파일 업로드 중 오류가 발생했습니다.',
       error: error instanceof Error ? error.message : 'Unknown error'

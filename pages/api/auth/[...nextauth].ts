@@ -4,6 +4,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import { getUserRole, getUserPermissions } from '../../../lib/admin';
 import { UserRole } from '../../../types/roles';
 import { createOrUpdateUser } from '../../../lib/users';
+import { logAction } from '../../../lib/logger';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -19,6 +20,27 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      try {
+        logAction({
+          action: 'auth.login',
+          outcome: 'success',
+          actor: {
+            email: user?.email || undefined,
+            name: user?.name || null,
+          },
+          target: {
+            type: 'session',
+          },
+          meta: {
+            provider: account?.provider,
+          },
+        });
+      } catch {
+        // logging must never block auth
+      }
+      return true;
+    },
     async jwt({ token, account, profile, user }) {
       // JWT 토큰에 추가 정보 저장
       if (account) {
@@ -62,6 +84,48 @@ export const authOptions: NextAuthOptions = {
         return url;
       }
       return baseUrl;
+    },
+  },
+  events: {
+    async signOut(message) {
+      try {
+        logAction({
+          action: 'auth.logout',
+          outcome: 'success',
+          actor: {
+            email: (message as any)?.token?.email || (message as any)?.session?.user?.email,
+          },
+          target: { type: 'session' },
+        });
+      } catch {
+        // no-op
+      }
+    },
+  },
+  logger: {
+    error(code, metadata) {
+      try {
+        logAction({
+          action: 'auth.error',
+          outcome: 'error',
+          target: { type: 'auth' },
+          meta: { code, metadata },
+        });
+      } catch {
+        // no-op
+      }
+    },
+    warn(code) {
+      try {
+        logAction({
+          action: 'auth.warn',
+          outcome: 'success',
+          target: { type: 'auth' },
+          meta: { code },
+        });
+      } catch {
+        // no-op
+      }
     },
   },
   pages: {

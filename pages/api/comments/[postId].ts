@@ -9,12 +9,15 @@ import {
 } from '../../../lib/comments';
 import { getPostById } from '../../../lib/posts';
 import { CommentApiResponse } from '../../../types/comment';
+import { getClientIp, logAction } from '../../../lib/logger';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CommentApiResponse>
 ) {
   const { postId } = req.query;
+  const ip = getClientIp(req);
+  const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
 
   if (!postId || typeof postId !== 'string') {
     return res.status(400).json({ success: false, error: '유효하지 않은 게시글 ID입니다.' });
@@ -42,11 +45,28 @@ export default async function handler(
     case 'POST':
       // 댓글 작성 (로그인 필수 - READER 이상, BANNED 제외)
       if (!session?.user?.email) {
+        logAction({
+          action: 'comment.create',
+          outcome: 'denied',
+          ip,
+          userAgent,
+          target: { type: 'post', id: postId },
+          error: 'unauthenticated',
+        });
         return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
       }
 
       // 차단된 사용자 확인
       if (!session.permissions?.canComment) {
+        logAction({
+          action: 'comment.create',
+          outcome: 'denied',
+          actor: { email: session.user.email, name: session.user.name || null, role: String((session as any).userRole || '') },
+          ip,
+          userAgent,
+          target: { type: 'post', id: postId },
+          error: 'insufficient_permissions',
+        });
         return res.status(403).json({ success: false, error: '댓글 작성 권한이 없습니다. 관리자에게 문의하세요.' });
       }
 
@@ -66,18 +86,58 @@ export default async function handler(
         });
 
         if (!result.success) {
+          logAction({
+            action: 'comment.create',
+            outcome: 'error',
+            actor: { email: session.user.email, name: session.user.name || null },
+            ip,
+            userAgent,
+            target: { type: 'post', id: postId },
+            error: result.error || 'create_failed',
+          });
           return res.status(400).json({ success: false, error: result.error });
         }
+
+        logAction({
+          action: 'comment.create',
+          outcome: 'success',
+          actor: { email: session.user.email, name: session.user.name || null, role: String((session as any).userRole || '') },
+          ip,
+          userAgent,
+          target: { type: 'post', id: postId },
+          meta: { commentId: result.comment?.id },
+        });
 
         return res.status(201).json({ success: true, comment: result.comment });
       } catch (error) {
         console.error('Create comment error:', error);
+        try {
+          logAction({
+            action: 'comment.create',
+            outcome: 'error',
+            actor: { email: session.user.email, name: session.user.name || null },
+            ip,
+            userAgent,
+            target: { type: 'post', id: postId },
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        } catch {
+          // no-op
+        }
         return res.status(500).json({ success: false, error: '댓글 작성 중 오류가 발생했습니다.' });
       }
 
     case 'DELETE':
       // 댓글 삭제
       if (!session?.user?.email) {
+        logAction({
+          action: 'comment.delete',
+          outcome: 'denied',
+          ip,
+          userAgent,
+          target: { type: 'post', id: postId },
+          error: 'unauthenticated',
+        });
         return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
       }
 
@@ -102,18 +162,61 @@ export default async function handler(
         const isCommentAuthor = comment.authorEmail === session.user.email;
 
         if (!isAdmin && !isPostAuthor && !isCommentAuthor) {
+          logAction({
+            action: 'comment.delete',
+            outcome: 'denied',
+            actor: { email: session.user.email, name: session.user.name || null, role: String((session as any).userRole || '') },
+            ip,
+            userAgent,
+            target: { type: 'comment', id: commentId },
+            meta: { postId },
+            error: 'forbidden',
+          });
           return res.status(403).json({ success: false, error: '댓글을 삭제할 권한이 없습니다.' });
         }
 
         const result = deleteComment(postId, commentId);
 
         if (!result.success) {
+          logAction({
+            action: 'comment.delete',
+            outcome: 'error',
+            actor: { email: session.user.email, name: session.user.name || null },
+            ip,
+            userAgent,
+            target: { type: 'comment', id: commentId },
+            meta: { postId },
+            error: result.error || 'delete_failed',
+          });
           return res.status(400).json({ success: false, error: result.error });
         }
+
+        logAction({
+          action: 'comment.delete',
+          outcome: 'success',
+          actor: { email: session.user.email, name: session.user.name || null, role: String((session as any).userRole || '') },
+          ip,
+          userAgent,
+          target: { type: 'comment', id: commentId },
+          meta: { postId },
+        });
 
         return res.status(200).json({ success: true, message: '댓글이 삭제되었습니다.' });
       } catch (error) {
         console.error('Delete comment error:', error);
+        try {
+          logAction({
+            action: 'comment.delete',
+            outcome: 'error',
+            actor: { email: session.user.email, name: session.user.name || null },
+            ip,
+            userAgent,
+            target: { type: 'post', id: postId },
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        } catch {
+          // no-op
+        }
         return res.status(500).json({ success: false, error: '댓글 삭제 중 오류가 발생했습니다.' });
       }
 

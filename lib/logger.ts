@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import type { NextApiRequest } from 'next';
 
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
@@ -59,5 +60,58 @@ export const initLogger = () => {
     };
   }
 };
+
+function safeJsonStringify(value: unknown): string {
+  const seen = new WeakSet<object>();
+  try {
+    return JSON.stringify(value, (_key, v) => {
+      if (typeof v === 'bigint') return v.toString();
+      if (typeof v === 'object' && v !== null) {
+        if (seen.has(v as object)) return '[Circular]';
+        seen.add(v as object);
+      }
+      return v;
+    });
+  } catch {
+    return String(value);
+  }
+}
+
+export function getClientIp(req: NextApiRequest): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  const realIp = req.headers['x-real-ip'];
+
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+
+  if (typeof realIp === 'string') {
+    return realIp;
+  }
+
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+export type ActionLog = {
+  action: string;
+  outcome: 'success' | 'denied' | 'error';
+  actor?: {
+    email?: string;
+    name?: string | null;
+    role?: string;
+  };
+  target?: {
+    type: string;
+    id?: string;
+  };
+  ip?: string;
+  userAgent?: string;
+  meta?: Record<string, unknown>;
+  error?: string;
+};
+
+export function logAction(entry: ActionLog) {
+  logger.info(safeJsonStringify(entry));
+}
 
 export default logger;
