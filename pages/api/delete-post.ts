@@ -1,8 +1,10 @@
+import { isValidPostId } from '../../lib/validation';
+import { isAllowedMutation } from '../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { deletePost, getPostById } from '../../lib/posts';
-import { isAdmin } from '../../lib/admin';
+import { getUserPermissions } from '../../lib/admin';
 import { getClientIp, logAction } from '../../lib/logger';
 
 interface DeletePostRequest extends NextApiRequest {
@@ -20,6 +22,10 @@ export default async function handler(
   req: DeletePostRequest,
   res: NextApiResponse<DeletePostResponse>
 ) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ message: 'Forbidden origin' });
+  }
+
   if (req.method !== 'DELETE') {
     res.setHeader('Allow', ['DELETE']);
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
@@ -45,7 +51,7 @@ export default async function handler(
 
     const { id } = req.query;
 
-    if (!id || typeof id !== 'string') {
+    if (!isValidPostId(id)) {
       return res.status(400).json({ message: '게시글 ID가 필요합니다.' });
     }
 
@@ -58,11 +64,12 @@ export default async function handler(
 
     // 권한 확인
     const userEmail = session.user.email;
-    const isUserAdmin = isAdmin(userEmail);
+    const permissions = getUserPermissions(userEmail);
+    const isUserAdmin = permissions.canDelete;
     const isPostAuthor = post.authorEmail === userEmail;
 
     // Admin은 모든 글 삭제 가능, Writer는 자신의 글만 삭제 가능
-    if (!isUserAdmin && !isPostAuthor) {
+    if (!isUserAdmin && !(permissions.canWrite && isPostAuthor)) {
       logAction({
         action: 'post.delete',
         outcome: 'denied',
@@ -77,25 +84,8 @@ export default async function handler(
       });
     }
 
-    // 삭제 권한이 있는지 확인 (Admin이거나 Writer여야 함)
-    const permissions = session.permissions;
-    if (!permissions || (!permissions.canDelete && !isPostAuthor)) {
-      logAction({
-        action: 'post.delete',
-        outcome: 'denied',
-        actor: { email: userEmail, name: session.user.name || null, role: String((session as any).userRole || '') },
-        ip,
-        userAgent,
-        target: { type: 'post', id },
-        error: 'insufficient_permissions',
-      });
-      return res.status(403).json({ 
-        message: '삭제 권한이 없습니다.' 
-      });
-    }
-
     // 게시글 삭제
-    const result = deletePost(id);
+    const result = deletePost(id, post.authorEmail);
 
     if (result.success) {
       logAction({

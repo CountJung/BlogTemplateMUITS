@@ -7,12 +7,12 @@ import type { NextApiRequest } from 'next';
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
 // Ensure log directory exists
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR);
+if (!fs.existsSync(/* turbopackIgnore: true */ LOG_DIR)) {
+  fs.mkdirSync(/* turbopackIgnore: true */ LOG_DIR);
 }
 
 const transport = new DailyRotateFile({
-  filename: path.join(LOG_DIR, 'app-%DATE%.log'),
+  filename: path.join(/* turbopackIgnore: true */ LOG_DIR, 'app-%DATE%.log'),
   datePattern: 'YYYY-MM-DD',
   zippedArchive: false,
   maxSize: '20m',

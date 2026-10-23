@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Language, Translations } from '../types/language';
 import { ko } from '../locales/ko';
 import { en } from '../locales/en';
@@ -35,12 +35,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, in
     }
   }, []);
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('language', lang);
-  };
+  }, []);
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
+  const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     const translations = language === 'ko' ? ko : en;
     
     // Handle dot notation for nested keys (e.g., 'settingsPage.korean')
@@ -68,7 +68,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, in
     }
 
     return text;
-  };
+  }, [language]);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>

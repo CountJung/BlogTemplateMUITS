@@ -53,7 +53,7 @@ const LoginPage: NextPage = () => {
           setError(t('loginPage.loginError'));
       }
     }
-  }, [router]);
+  }, [router, t]);
 
   const handleGoogleLogin = async () => {
     try {

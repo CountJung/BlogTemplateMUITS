@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
@@ -71,7 +71,7 @@ const AdminPage: NextPage = () => {
   }, [status, session, router]);
 
   // 사용자 목록 로드
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     setError('');
     
@@ -93,13 +93,13 @@ const AdminPage: NextPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     if (status === 'authenticated') {
       loadUsers();
     }
-  }, [status]);
+  }, [status, loadUsers]);
 
   // 역할 변경 다이얼로그 열기
   const handleEditRole = (user: User) => {

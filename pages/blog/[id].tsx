@@ -1,3 +1,4 @@
+import { toPublicPost } from '../../lib/public-posts';
 import React, { useState, useEffect } from 'react';
 import type { NextPage, GetStaticPaths, GetStaticProps } from 'next';
 import {
@@ -92,27 +93,20 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
     };
 
     loadTextFiles();
-  }, [post?.attachments]);
+  }, [post?.attachments, t]);
   
-  // 삭제 권한 확인 (Admin은 모든 글, Writer는 자신의 글만)
-  const canDelete = (() => {
-    if (!session?.user?.email) return false;
-    
-    const isAdmin = session.permissions?.canDelete || false;
-    const isAuthor = post.authorEmail === session.user.email;
-    
-    return isAdmin || isAuthor;
-  })();
-
-  // 수정 권한 확인 (Admin 또는 작성자)
-  const canEdit = (() => {
-    if (!session?.user?.email) return false;
-    
-    const isAdmin = (session as any).isAdmin || false;
-    const isAuthor = post.authorEmail === session.user.email;
-    
-    return isAdmin || isAuthor;
-  })();
+  const [canManage, setCanManage] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setCanManage(false);
+    if (session?.user?.email) {
+      fetch(`/api/posts/${encodeURIComponent(post.id)}`).then(response => response.json())
+        .then(data => { if (active) setCanManage(data.canManage === true); }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [post.id, session?.user?.email, session?.permissions?.canWrite]);
+  const canDelete = canManage;
+  const canEdit = canManage;
 
   const handleDeletePost = async () => {
     setDeleteLoading(true);
@@ -535,7 +529,7 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
 
       {/* 댓글 섹션 */}
       <Box sx={{ displayPrint: 'none' }}>
-        <Comments postId={post.id} postAuthorEmail={post.authorEmail || ''} />
+        <Comments postId={post.id} />
       </Box>
       
       {/* 삭제 확인 다이얼로그 */}
@@ -602,7 +596,7 @@ export const getStaticProps: GetStaticProps<BlogDetailPageProps> = async ({ para
   
   return {
     props: {
-      post,
+      post: toPublicPost(post),
     },
     // 10초마다 페이지를 재생성 (필요에 따라 조정 가능)
     revalidate: 10,

@@ -21,6 +21,8 @@ export interface BlogPost {
   attachments?: FileAttachment[];
 }
 
+export type PostSummary = Omit<BlogPost, 'content' | 'authorEmail' | 'attachments'> & { canManage: boolean };
+
 export interface PostFormData {
   id: string;
   title: string;
@@ -94,4 +96,13 @@ export interface PaginatedBlogListProps {
   totalPosts: number;
 }
 
-export interface HomePageProps extends PaginatedBlogListProps {}
+export interface HomePageProps {
+  posts: PostSummary[];
+  currentPage: number;
+  totalPages: number;
+  postsPerPage: number;
+  totalPosts: number;
+  search: string;
+  selectedTag: string;
+  allTags: string[];
+}

@@ -1,5 +1,5 @@
 // 권한 관리 유틸리티 함수
-import { getUser } from './users';
+import { getUser, getAllUsers } from './users';
 import type { UserPermissions } from '../types/roles';
 import { UserRole } from '../types/roles';
 
@@ -110,7 +110,6 @@ export function getAdminEmails(): string[] {
 
 export function getWriterEmails(): string[] {
   // users.json에서 WRITER 권한을 가진 사용자 목록 반환
-  const { getAllUsers } = require('./users');
   const users = getAllUsers();
   return users
     .filter((user: any) => user.role === UserRole.WRITER)

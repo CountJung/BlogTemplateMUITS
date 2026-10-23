@@ -1,3 +1,6 @@
+import { canManagePost, toPublicPost } from '../../../lib/public-posts';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../api/auth/[...nextauth]';
 import React, { useState, useEffect } from 'react';
 import type { NextPage, GetServerSideProps } from 'next';
 import {
@@ -71,7 +74,7 @@ const EditPostPage: NextPage<EditPostPageProps> = ({ post }) => {
       router.push('/auth/login');
     } else if (status === 'authenticated' && session?.user?.email && post) {
       const isAdmin = (session as any).isAdmin || false;
-      const isAuthor = post.authorEmail === session.user.email;
+      const isAuthor = session.permissions?.canWrite === true;
 
       if (!isAdmin && !isAuthor) {
         router.push('/');
@@ -381,7 +384,11 @@ const EditPostPage: NextPage<EditPostPageProps> = ({ post }) => {
 
 export const getServerSideProps: GetServerSideProps<EditPostPageProps> = async (context) => {
   const { id } = context.params as { id: string };
+  const session = await getServerSession(context.req, context.res, authOptions);
   const post = getPostById(id);
+  context.res.setHeader('Cache-Control', 'private, no-store');
+  if (!session?.user?.email) return { redirect: { destination: '/auth/login', permanent: false } };
+  if (post && !canManagePost(post, session.user.email)) return { notFound: true };
 
   if (!post) {
     return {
@@ -391,7 +398,7 @@ export const getServerSideProps: GetServerSideProps<EditPostPageProps> = async (
 
   return {
     props: {
-      post,
+      post: toPublicPost(post),
     },
   };
 };

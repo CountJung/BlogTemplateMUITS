@@ -1,3 +1,8 @@
+import { canAttachFiles } from '../../../lib/attachments';
+import { canManagePost } from '../../../lib/public-posts';
+import { isValidPostId, validatePostInput } from '../../../lib/validation';
+import { getUserPermissions } from '../../../lib/admin';
+import { isAllowedMutation } from '../../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
@@ -8,16 +13,27 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ message: 'Forbidden origin' });
+  }
+
   const { id } = req.query;
   const ip = getClientIp(req);
   const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
 
-  if (!id || typeof id !== 'string') {
+  if (!isValidPostId(id)) {
     return res.status(400).json({ message: '유효하지 않은 게시글 ID입니다.' });
   }
 
   // 세션 확인
   const session = await getServerSession(req, res, authOptions);
+
+  if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'private, no-store');
+    const post = getPostById(id);
+    if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
+    return res.status(200).json({ canManage: canManagePost(post, session?.user?.email) });
+  }
 
   if (!session?.user?.email) {
     logAction({
@@ -38,12 +54,13 @@ export default async function handler(
   }
 
   switch (req.method) {
-    case 'PUT':
+    case 'PUT': {
       // 게시글 수정 권한 확인
-      const isAdmin = (session as any).isAdmin || false;
+      const permissions = getUserPermissions(session.user.email);
+      const isAdmin = permissions.canDelete;
       const isAuthor = post.authorEmail === session.user.email;
 
-      if (!isAdmin && !isAuthor) {
+      if (!isAdmin && !(permissions.canWrite && isAuthor)) {
         logAction({
           action: 'post.update',
           outcome: 'denied',
@@ -57,6 +74,8 @@ export default async function handler(
       }
 
       try {
+        const invalid = validatePostInput({ ...req.body, id });
+        if (invalid) return res.status(400).json({ message: invalid });
         const { title, content, tags, excerpt, attachments } = req.body;
 
         // 유효성 검사
@@ -77,6 +96,7 @@ export default async function handler(
           attachments: attachments || [], // 첨부파일 업데이트
         };
 
+        if (!canAttachFiles(postData.attachments, session.user.email, post.attachments)) return res.status(403).json({ message: '첨부파일을 사용할 권한이 없습니다.' });
         const result = updatePost(id, postData);
 
         if (result.success) {
@@ -126,8 +146,9 @@ export default async function handler(
         return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
       }
 
+    }
     default:
-      res.setHeader('Allow', ['PUT']);
+      res.setHeader('Allow', ['GET', 'PUT']);
       return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   }
 }

@@ -1,3 +1,6 @@
+import { isValidPostId } from '../../../lib/validation';
+import { getUserPermissions } from '../../../lib/admin';
+import { isAllowedMutation } from '../../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
@@ -15,11 +18,15 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CommentApiResponse>
 ) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ success: false, message: 'Forbidden origin' });
+  }
+
   const { postId } = req.query;
   const ip = getClientIp(req);
   const userAgent = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
 
-  if (!postId || typeof postId !== 'string') {
+  if (!isValidPostId(postId)) {
     return res.status(400).json({ success: false, error: '유효하지 않은 게시글 ID입니다.' });
   }
 
@@ -31,12 +38,20 @@ export default async function handler(
 
   const session = await getServerSession(req, res, authOptions);
 
+  const toPublicComment = (comment: import('../../../types/comment').Comment) => {
+    const email = session?.user?.email;
+    const permissions = getUserPermissions(email);
+    const { authorEmail, ...publicComment } = comment;
+    return { ...publicComment, canDelete: !!email && (permissions.canDelete || (permissions.canComment &&
+      (email === authorEmail || email === post.authorEmail))) };
+  };
+  res.setHeader('Cache-Control', 'private, no-store');
   switch (req.method) {
     case 'GET':
       // 댓글 목록 조회 (로그인 불필요)
       try {
         const comments = getCommentsByPostId(postId);
-        return res.status(200).json({ success: true, comments });
+        return res.status(200).json({ success: true, comments: comments.map(toPublicComment) });
       } catch (error) {
         console.error('Get comments error:', error);
         return res.status(500).json({ success: false, error: '댓글 조회 중 오류가 발생했습니다.' });
@@ -57,7 +72,7 @@ export default async function handler(
       }
 
       // 차단된 사용자 확인
-      if (!session.permissions?.canComment) {
+      if (!getUserPermissions(session.user.email).canComment) {
         logAction({
           action: 'comment.create',
           outcome: 'denied',
@@ -71,7 +86,7 @@ export default async function handler(
       }
 
       try {
-        const { content } = req.body;
+        const { content } = req.body || {};
 
         if (!content || typeof content !== 'string') {
           return res.status(400).json({ success: false, error: '댓글 내용을 입력해주세요.' });
@@ -108,7 +123,7 @@ export default async function handler(
           meta: { commentId: result.comment?.id },
         });
 
-        return res.status(201).json({ success: true, comment: result.comment });
+        return res.status(201).json({ success: true, comment: result.comment ? toPublicComment(result.comment) : undefined });
       } catch (error) {
         console.error('Create comment error:', error);
         try {
@@ -142,7 +157,7 @@ export default async function handler(
       }
 
       try {
-        const { commentId } = req.body;
+        const { commentId } = req.body || {};
 
         if (!commentId || typeof commentId !== 'string') {
           return res.status(400).json({ success: false, error: '유효하지 않은 댓글 ID입니다.' });
@@ -157,11 +172,12 @@ export default async function handler(
         // 1. 관리자 (ADMIN) - 모든 댓글 삭제 가능
         // 2. 게시글 작성자 - 해당 게시글의 모든 댓글 삭제 가능
         // 3. 댓글 작성자 - 자신의 댓글만 삭제 가능
-        const isAdmin = (session as any).isAdmin || false;
+        const permissions = getUserPermissions(session.user.email);
+        const isAdmin = permissions.canDelete;
         const isPostAuthor = post.authorEmail === session.user.email;
         const isCommentAuthor = comment.authorEmail === session.user.email;
 
-        if (!isAdmin && !isPostAuthor && !isCommentAuthor) {
+        if (!isAdmin && !(permissions.canComment && (isPostAuthor || isCommentAuthor))) {
           logAction({
             action: 'comment.delete',
             outcome: 'denied',

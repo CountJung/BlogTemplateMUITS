@@ -18,7 +18,7 @@ export const initScheduler = () => {
   // Else if second > 0: Run every X seconds
   // Default: Run every hour (0 * * * *) if all are 0 (or fallback)
   
-  let cronExpression = '0 * * * *'; // Default
+  let cronExpression: string;
   
   const { hour, minute, second } = scheduler;
 
@@ -47,7 +47,7 @@ export const initScheduler = () => {
     currentTask = new CronJob(cronExpression, () => {
       console.log('Running log cleanup scheduler...');
       
-      if (!fs.existsSync(LOG_DIR)) {
+      if (!fs.existsSync(/* turbopackIgnore: true */ LOG_DIR)) {
         return;
       }
 
@@ -55,7 +55,7 @@ export const initScheduler = () => {
       const currentSettings = getSystemSettings();
       const retentionMs = currentSettings.logRetentionDays * 24 * 60 * 60 * 1000;
 
-      fs.readdir(LOG_DIR, (err, files) => {
+      fs.readdir(/* turbopackIgnore: true */ LOG_DIR, (err, files) => {
         if (err) {
           console.error('Error reading log directory:', err);
           return;
@@ -71,14 +71,14 @@ export const initScheduler = () => {
               return;
           }
 
-          fs.stat(filePath, (err, stats) => {
+          fs.stat(/* turbopackIgnore: true */ filePath, (err, stats) => {
             if (err) {
               console.error(`Error getting stats for file ${file}:`, err);
               return;
             }
 
             if (now - stats.mtimeMs > retentionMs) {
-              fs.unlink(filePath, (err) => {
+              fs.unlink(/* turbopackIgnore: true */ filePath, (err) => {
                 if (err) {
                   console.error(`Error deleting file ${file}:`, err);
                 } else {

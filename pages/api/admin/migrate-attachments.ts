@@ -1,3 +1,5 @@
+import { getUserPermissions } from '../../../lib/admin';
+import { isAllowedMutation } from '../../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
@@ -7,6 +9,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ message: 'Forbidden origin' });
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
@@ -20,7 +26,7 @@ export default async function handler(
       return res.status(401).json({ message: '로그인이 필요합니다.' });
     }
 
-    const permissions = (session as any).permissions;
+    const permissions = getUserPermissions(session.user.email);
     if (!permissions?.canDelete) {
       return res.status(403).json({ message: '관리자 권한이 필요합니다.' });
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -22,18 +22,17 @@ import {
   Comment as CommentIcon,
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
-import { Comment } from '../types/comment';
+import { PublicComment } from '../types/comment';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface CommentsProps {
   postId: string;
-  postAuthorEmail: string; // 게시글 작성자 이메일
 }
 
-const Comments: React.FC<CommentsProps> = ({ postId, postAuthorEmail }) => {
+const Comments: React.FC<CommentsProps> = ({ postId }) => {
   const { data: session } = useSession();
   const { t } = useLanguage();
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<PublicComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +42,7 @@ const Comments: React.FC<CommentsProps> = ({ postId, postAuthorEmail }) => {
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
   // 댓글 목록 조회
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/comments/${postId}`);
@@ -57,11 +56,11 @@ const Comments: React.FC<CommentsProps> = ({ postId, postAuthorEmail }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [postId]);
 
   useEffect(() => {
     fetchComments();
-  }, [postId]);
+  }, [fetchComments, session?.user?.email, session?.permissions?.canComment, session?.permissions?.canDelete]);
 
   // 댓글 작성
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -111,15 +110,7 @@ const Comments: React.FC<CommentsProps> = ({ postId, postAuthorEmail }) => {
   };
 
   // 댓글 삭제 권한 확인
-  const canDeleteComment = (comment: Comment): boolean => {
-    if (!session?.user?.email) return false;
-
-    const isAdmin = (session as any).isAdmin || false;
-    const isPostAuthor = postAuthorEmail === session.user.email;
-    const isCommentAuthor = comment.authorEmail === session.user.email;
-
-    return isAdmin || isPostAuthor || isCommentAuthor;
-  };
+  const canDeleteComment = (comment: PublicComment): boolean => comment.canDelete;
 
   // 댓글 삭제
   const handleDeleteComment = async () => {

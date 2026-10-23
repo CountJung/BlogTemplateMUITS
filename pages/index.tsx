@@ -23,36 +23,32 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { getPaginatedPosts, getAllPosts } from '../lib/posts';
-import { HomePageProps, BlogPost } from '../types/blog';
+import { getPublicPostPage } from '../lib/public-posts';
+import { getServerSession } from 'next-auth';
+import { authOptions } from './api/auth/[...nextauth]';
+import { HomePageProps, PostSummary } from '../types/blog';
 import { useLanguage } from '../contexts/LanguageContext';
 import ScrollToTop from '../components/ScrollToTop';
 
-const HomePage: NextPage<HomePageProps> = ({ 
-  posts: allPosts, // 전체 게시글 (검색용)
-  paginatedPosts, // 페이지네이션된 게시글 (기본 표시용)
-  currentPage: initialPage,
-  totalPages,
-  totalPosts 
+const HomePage: NextPage<HomePageProps> = ({
+  posts: filteredPosts, currentPage: initialPage, totalPages, totalPosts,
+  search, selectedTag: initialTag, allTags,
 }) => {
-  const { data: session } = useSession();
   const router = useRouter();
   const { t } = useLanguage();
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedTag, setSelectedTag] = useState<string>('');
-  const [filteredPage, setFilteredPage] = useState<number>(1);
-  
-  // 삭제 권한 확인 함수 (Admin은 모든 글, Writer는 자신의 글만)
-  const canDeletePost = (post: BlogPost): boolean => {
-    if (!session?.user?.email) return false;
-    
-    const isAdmin = session.permissions?.canDelete || false;
-    const isAuthor = post.authorEmail === session.user.email;
-    
-    return isAdmin || isAuthor;
-  };
+  const [searchTerm, setSearchTerm] = useState(search);
+  const [selectedTag, setSelectedTag] = useState(initialTag);
+  const canDeletePost = (post: PostSummary): boolean => post.canManage;
+
+  React.useEffect(() => { setSearchTerm(search); setSelectedTag(initialTag); }, [search, initialTag]);
+  React.useEffect(() => {
+    if (searchTerm === search && selectedTag === initialTag) return;
+    const timer = setTimeout(() => {
+      router.push({ pathname: '/', query: { q: searchTerm, tag: selectedTag, page: 1 } });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedTag, search, initialTag, router]);
 
   const handleQuickDelete = async (postId: string, postTitle: string) => {
     if (!confirm(t('confirmDeletePost', { title: postTitle }))) {
@@ -79,38 +75,8 @@ const HomePage: NextPage<HomePageProps> = ({
     }
   };
 
-  // 검색 및 필터링
-  const isSearchActive = searchTerm || selectedTag;
-  const allFilteredPosts = allPosts.filter(post => {
-    const matchesSearch = !searchTerm || 
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.author.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesTag = !selectedTag || post.tags.includes(selectedTag);
-    
-    return matchesSearch && matchesTag;
-  });
-
-  // 검색 결과 페이지네이션
-  const postsPerPage = 10;
-  const totalFilteredPosts = allFilteredPosts.length;
-  const totalFilteredPages = Math.ceil(totalFilteredPosts / postsPerPage);
-  const startIndex = (filteredPage - 1) * postsPerPage;
-  const endIndex = startIndex + postsPerPage;
-  const filteredPosts = isSearchActive ? allFilteredPosts.slice(startIndex, endIndex) : (paginatedPosts || []);
-
-  // 모든 태그 추출 (검색용으로 전체 게시글 사용)
-  const allTags = Array.from(new Set(allPosts.flatMap(post => post.tags)));
-
-  // 검색어나 태그 변경 시 페이지를 1로 리셋
-  React.useEffect(() => {
-    setFilteredPage(1);
-  }, [searchTerm, selectedTag]);
-
-  // 페이지 변경 핸들러
   const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
-    router.push(`/?page=${page}`);
+    router.push({ pathname: '/', query: { q: search, tag: initialTag, page } });
   };
 
   return (
@@ -258,41 +224,12 @@ const HomePage: NextPage<HomePageProps> = ({
         </Box>
       )}
 
-      {/* 페이지네이션 */}
-      {isSearchActive ? (
-        totalFilteredPages > 1 && (
-          <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
-            <Typography variant="body2" color="text.secondary">
-              {t('searchResults', { count: totalFilteredPosts })}
-            </Typography>
-            <Pagination
-              count={totalFilteredPages}
-              page={filteredPage}
-              onChange={(_event, page) => setFilteredPage(page)}
-              color="primary"
-              size="large"
-              showFirstButton
-              showLastButton
-            />
-          </Stack>
-        )
-      ) : (
-        totalPages > 1 && (
-          <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
-            <Typography variant="body2" color="text.secondary">
-              {t('totalPosts', { count: totalPosts })}
-            </Typography>
-            <Pagination
-              count={totalPages}
-              page={initialPage}
-              onChange={handlePageChange}
-              color="primary"
-              size="large"
-              showFirstButton
-              showLastButton
-            />
-          </Stack>
-        )
+      {totalPages > 1 && (
+        <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
+          <Typography variant="body2" color="text.secondary">{t('totalPosts', { count: totalPosts })}</Typography>
+          <Pagination count={totalPages} page={initialPage} onChange={handlePageChange}
+            color="primary" size="large" showFirstButton showLastButton />
+        </Stack>
       )}
 
       {/* 맨 위로 가기 버튼 */}
@@ -301,30 +238,10 @@ const HomePage: NextPage<HomePageProps> = ({
   );
 };
 
-export const getServerSideProps = async (context: any) => {
-  const page = Number(context.query?.page) || 1;
-  const postsPerPage = 10;
-  
-  // 검색/필터를 위해 항상 모든 게시글을 가져옴
-  const allPosts = getAllPosts();
-  const totalPosts = allPosts.length;
-  const totalPages = Math.ceil(totalPosts / postsPerPage);
-  
-  // 현재 페이지의 게시글만 추출 (검색 없을 때 사용)
-  const startIndex = (page - 1) * postsPerPage;
-  const endIndex = startIndex + postsPerPage;
-  const paginatedPosts = allPosts.slice(startIndex, endIndex);
-  
-  return {
-    props: {
-      posts: allPosts, // 전체 게시글 전달 (검색용)
-      paginatedPosts: paginatedPosts, // 페이지네이션된 게시글 (기본 표시용)
-      currentPage: page,
-      totalPages: totalPages,
-      postsPerPage: postsPerPage,
-      totalPosts: totalPosts,
-    },
-  };
+export const getServerSideProps: GetServerSideProps<HomePageProps> = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+  context.res.setHeader('Cache-Control', 'private, no-store');
+  return { props: getPublicPostPage(context.query, session?.user?.email) };
 };
 
 export default HomePage;

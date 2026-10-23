@@ -1,204 +1,42 @@
-# Next.js Blog Project
+# BlogTemplateMUITS
 
-Google OAuth 인증과 역할 기반 권한 시스템을 갖춘 현대적인 블로그 플랫폼입니다.
+Next.js Pages Router, Material UI, NextAuth Google OAuth를 사용하는 파일 기반 블로그다.
+게시글은 Markdown, 사용자·댓글·설정 등은 로컬 JSON 파일에 저장한다.
 
-## 🚀 주요 기능
+## 시작하기
 
-- **Google OAuth 로그인**: NextAuth.js 기반 인증
-- **역할 기반 권한 시스템**:
-  - **Admin**: 모든 권한 (읽기, 쓰기, 모든 글 삭제) + 사용자 관리
-  - **Writer**: 읽기, 쓰기, 자신의 글만 삭제
-  - **Reader**: 읽기 전용
-- **관리자 페이지**: 사용자 권한 관리 (역할 변경, 사용자 삭제)
-- **다국어 지원 (i18n)**: 한국어/영어 지원 및 중첩 키 구조 개선
-- **다크/라이트 테마**: 시스템 설정 자동 감지 및 수동 전환
-- **반응형 디자인**: 모바일, 태블릿, 데스크톱 지원
-- **사용자 경험 개선**:
-  - **Scroll to Top**: 긴 페이지에서 상단으로 빠르게 이동하는 버튼 제공
-  - **페이지네이션**: 페이지당 10개 게시글 표시로 탐색 효율성 증대
-  - **인쇄 지원**: 블로그 게시글 인쇄 시 불필요한 UI 요소(헤더, 푸터, 댓글 등)를 숨기고 콘텐츠만 깔끔하게 출력
-- **마크다운 지원**: 코드 하이라이팅 포함
-
-## 📅 최근 업데이트 (2025.12.03)
-
-- **게시글 인쇄 기능 추가**:
-  - 블로그 상세 페이지에 '인쇄' 버튼 추가.
-  - 인쇄 시 레이아웃(헤더, 푸터, 사이드바) 및 댓글 섹션 자동 숨김 처리.
-  - 콘텐츠 중심의 인쇄 스타일 적용.
-
-## 📅 이전 업데이트 (2025.11.26)
-
-- **시스템 로깅 및 스케줄러**:
-  - `winston` 기반의 파일 로깅 시스템 구축 (`logs/` 폴더에 저장).
-  - 로그 자동 삭제 스케줄러 구현 (기본 10일 보관, 1시간마다 체크).
-  - 관리자 전용 시스템 설정 페이지(`/settings`) 추가: 로그 보관 기간 및 스케줄러 실행 주기 설정 가능.
-- **언어 설정 UX 개선**:
-  - 헤더(AppBar)에 언어 전환 버튼 추가 (지구본 아이콘).
-  - 언어 설정을 클라이언트(`localStorage`) 단위로 변경하여 사용자별 맞춤 설정 지원.
-- **i18n 시스템 개선**: `LanguageContext` 리팩토링을 통해 중첩된 번역 키(예: `settingsPage.korean`) 지원 추가.
-- **UI/UX 강화**:
-  - 홈 화면 게시글 목록 표시 개수 상향 (5개 → 10개).
-  - 스크롤 시 나타나는 '맨 위로 가기' 버튼(FAB) 추가.
-- **버그 수정**: 관리자 페이지(`admin/index.tsx`) 변수 참조 오류 수정.
-
-## 📋 시작하기
-
-### 1. 환경 설정
-
-`.env.example` 파일을 `.env`로 복사하고 실제 값으로 변경하세요:
+Node.js 22.13 이상인 22.x 또는 24 이상을 사용한다. 의존성 버전 정본은
+[package-lock.json](package-lock.json), 실행 명령 정본은 [package.json](package.json)이다.
 
 ```bash
-cp .env.example .env
-```
-
-### 2. 환경 변수 설정
-
-`.env` 파일을 편집하여 다음 값들을 설정하세요:
-
-```env
-# NextAuth.js
-NEXTAUTH_URL=http://localhost:54321
-NEXTAUTH_SECRET=your-very-secure-random-secret-key-minimum-32-characters
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Permission Settings (초기 관리자만 설정)
-ADMIN_EMAILS=admin@example.com
-
-# 일반 사용자와 작성자 권한은 관리자 페이지(/admin)에서 관리합니다.
-```
-
-**⚠️ 중요**: `WRITER_EMAILS` 환경 변수는 더 이상 사용되지 않습니다. 모든 권한 관리는 관리자 페이지에서 처리됩니다.
-
-### 3. Google OAuth 설정
-
-1. [Google Cloud Console](https://console.cloud.google.com/) 접속
-2. 새 프로젝트 생성 또는 기존 프로젝트 선택
-3. **APIs & Services** → **Credentials** 이동
-4. **OAuth 2.0 Client IDs** 생성:
-   - Application type: Web application
-   - Authorized redirect URIs:
-     - `http://localhost:54321/api/auth/callback/google`
-     - (프로덕션) `https://your-domain.com/api/auth/callback/google`
-
-### 4. 의존성 설치 및 실행
-
-```bash
-npm install
+npm ci
+cp .env.example .env.local
+# .env.local에 로컬 OAuth 설정과 NEXTAUTH_SECRET을 입력한다.
 npm run dev
 ```
 
-브라우저에서 http://localhost:54321 접속
+기본 개발 주소는 http://localhost:65002 이다. `NEXTAUTH_URL`과 Google OAuth 콜백도
+같은 로컬 주소를 사용한다. 운영 자격증명이나 데이터를 로컬 검증에 복사하지 않는다.
 
-## 🔐 권한 시스템
-
-### 권한 관리 방식
-
-1. **초기 설정**: `.env` 파일의 `ADMIN_EMAILS`에 초기 관리자 이메일 설정
-2. **자동 등록**: 사용자가 로그인하면 자동으로 `data/users.json`에 등록됩니다
-3. **권한 관리**: 관리자는 `/admin` 페이지에서 모든 사용자의 권한을 관리할 수 있습니다
-
-### 권한별 기능
-
-#### Admin 권한
-- 모든 게시글 읽기
-- 새 게시글 작성
-- 모든 게시글 삭제 (다른 사용자의 글 포함)
-- **사용자 관리 페이지 접근**
-- **사용자 권한 변경 및 삭제**
-
-#### Writer 권한
-- 모든 게시글 읽기
-- 새 게시글 작성
-- **자신이 작성한 게시글만 삭제 가능**
-
-#### Reader 권한 (기본)
-- 게시글 읽기만 가능
-
-### 사용자 관리 페이지
-
-관리자는 `/admin` 경로에서 다음 작업을 수행할 수 있습니다:
-
-- 📊 사용자 통계 확인 (전체/관리자/작성자/독자 수)
-- 👥 전체 사용자 목록 조회
-- ✏️ 사용자 권한 변경 (READER ↔ WRITER ↔ ADMIN)
-- 🗑️ 사용자 삭제
-- 🔍 이메일/이름으로 사용자 검색
-
-## 🛠️ 기술 스택
-
-- **Framework**: Next.js 16.0.1
-- **UI Library**: Material-UI (MUI) 7.3.4
-- **Authentication**: NextAuth.js 4.24.13
-- **Styling**: Emotion
-- **Markdown**: react-markdown, remark-gfm, rehype-highlight
-- **Language**: TypeScript
-
-## 📂 프로젝트 구조
-
-```
-├── components/          # React 컴포넌트
-│   ├── Layout.tsx      # 레이아웃 및 네비게이션
-│   └── ThemeSwitcher.tsx # 테마 전환 컴포넌트
-├── contexts/           # React Context
-│   └── ThemeContext.tsx # 테마 상태 관리
-├── content/            # 마크다운 게시글
-│   └── posts/
-├── lib/                # 유틸리티 함수
-│   ├── admin.ts        # 권한 관리
-│   └── posts.ts        # 게시글 CRUD
-├── pages/              # Next.js 페이지
-│   ├── api/            # API 라우트
-│   ├── auth/           # 인증 페이지
-│   ├── blog/           # 블로그 페이지
-│   └── index.tsx       # 홈페이지
-├── types/              # TypeScript 타입 정의
-└── .env.example        # 환경 변수 템플릿
-```
-
-## 🔒 보안 주의사항
-
-- `.env` 파일은 **절대 Git에 커밋하지 마세요**
-- `NEXTAUTH_SECRET`은 최소 32자 이상의 안전한 랜덤 문자열을 사용하세요
-- 프로덕션 환경에서는 HTTPS를 사용하세요
-- Google OAuth 리디렉션 URI를 정확히 설정하세요
-
-## 🚀 프로덕션 배포
-
-### 환경 변수 설정
-프로덕션 환경에서는 `.env.production` 파일 또는 호스팅 플랫폼의 환경 변수 설정을 사용하세요.
-
-### 빌드
 ```bash
+npm run type-check
+npm run lint
+npm test
 npm run build
+npm run test:http
 npm start
 ```
 
-### Docker 배포
-시놀로지 NAS 등의 Docker 환경에서 배포 가능합니다. (docker-compose.yml 참조)
+실행 결과와 미검증 조건은 [검증 기록](docs/verification.md)을 확인한다.
+배포 전 결정과 외부 설정 작업은 [TODO](docs/TODO.md)에 남긴다.
 
-## 📝 라이선스
+## 문서 안내
 
-MIT
+- [문서 등록부·에이전트 지침](AGENTS.md)
+- [운영 및 개발 안내](docs/operations.md): 환경, 저장소 구조, 권한과 개발 규칙
+- [우선순위 TODO](docs/TODO.md): 남은 작업과 완료 조건
+- [검증 기록](docs/verification.md): 코드 상태, 절차, 결과, 미검증 경계
+- [과거 자료 색인](docs/history/README.md): 초기 요구사항과 이전 보고서
 
-## 🤝 기여
-
-이슈와 풀 리퀘스트를 환영합니다!
-
-## 📝 개발 지침 (Development Guidelines)
-
-### 🌐 다국어 지원 (i18n)
-
-이 프로젝트는 한국어(`ko`)와 영어(`en`)를 지원합니다. 새로운 기능을 개발하거나 UI를 수정할 때는 반드시 다국어 지원을 고려해야 합니다.
-
-1.  **하드코딩 금지**: UI에 표시되는 모든 텍스트는 하드코딩하지 말고 `locales/ko.ts`와 `locales/en.ts`에 정의된 키를 사용하세요.
-2.  **키 구조**: 관련된 키들은 중첩 객체로 그룹화하여 관리하세요 (예: `settingsPage.systemSettings`).
-3.  **타입 정의**: 새로운 키를 추가할 때는 `types/language.ts`의 `Translations` 인터페이스도 함께 업데이트해야 합니다.
-4.  **사용법**: 컴포넌트에서 `useLanguage` 훅을 사용하여 텍스트를 불러오세요.
-    ```tsx
-    const { t } = useLanguage();
-    // ...
-    <Typography>{t('settingsPage.systemSettings')}</Typography>
-    ```
+현재 저장소에는 Docker 배포 설정과 라이선스 파일이 없다. 라이선스 선택과 배포 환경은
+[TODO](docs/TODO.md)에서 별도로 관리한다.

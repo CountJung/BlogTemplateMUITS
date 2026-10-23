@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { NextPage } from 'next';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
@@ -41,16 +41,7 @@ const AdminLogsPage: NextPage = () => {
   const [loadingContent, setLoadingContent] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    if (!session || !(session as any).isAdmin) {
-      router.push('/');
-      return;
-    }
-    fetchFiles();
-  }, [session, status, router]);
-
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     setLoadingFiles(true);
     setError(null);
     try {
@@ -66,7 +57,18 @@ const AdminLogsPage: NextPage = () => {
     } finally {
       setLoadingFiles(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session || !(session as any).isAdmin) {
+      router.push('/');
+      return;
+    }
+    fetchFiles();
+  }, [session, status, router, fetchFiles]);
+
+
 
   const handleFileSelect = async (filename: string) => {
     setSelectedFile(filename);

@@ -20,7 +20,8 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== 'google' || !(profile as { email_verified?: boolean } | undefined)?.email_verified || !user.email) return false;
       try {
         logAction({
           action: 'auth.login',
@@ -43,14 +44,12 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, account, profile, user }) {
       // JWT 토큰에 추가 정보 저장
-      if (account) {
-        token.accessToken = account.access_token;
-      }
+      delete token.accessToken;
       
       // 사용자 권한 정보 추가 및 데이터베이스에 저장
       if (token.email) {
         // 사용자 정보 저장/업데이트
-        createOrUpdateUser({
+        if (user) createOrUpdateUser({
           email: token.email,
           name: token.name || null,
           image: token.picture || null,
@@ -70,7 +69,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       // 세션에 추가 정보 포함
-      (session as any).accessToken = token.accessToken;
+
       (session as any).userRole = token.userRole || UserRole.READER;
       (session as any).permissions = token.permissions;
       (session as any).isAdmin = token.isAdmin || false;

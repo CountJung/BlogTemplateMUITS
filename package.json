@@ -4,10 +4,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev -p 65002",
-    "build": "next build",
+    "build": "next build && node scripts/check-standalone.cjs",
     "start": "next start -p 65002",
     "type-check": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.cjs",
+    "test:http": "node tests/http-smoke.cjs",
+    "lint": "eslint . --max-warnings=0",
+    "attachments:inspect": "node scripts/inspect-attachments.cjs"
   },
   "keywords": [],
   "author": "",
@@ -22,10 +25,10 @@
     "formidable": "^3.5.4",
     "gray-matter": "^4.0.3",
     "mime-types": "^3.0.1",
-    "next": "^16.0.1",
-    "next-auth": "^4.24.13",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "next": "^16.4.1",
+    "next-auth": "^4.24.15",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
@@ -33,12 +36,21 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/formidable": "^3.4.6",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^24.9.2",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@typescript-eslint/parser": "^8.72.0",
     "baseline-browser-mapping": "^2.9.13",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0"
   }
 }

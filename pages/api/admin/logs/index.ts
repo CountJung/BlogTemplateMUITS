@@ -1,14 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]';
+import { getUserPermissions } from '../../../../lib/admin';
 import fs from 'fs';
 import path from 'path';
 
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
+  const session = await getServerSession(req, res, authOptions);
 
-  if (!session || !(session as any).isAdmin) {
+  if (!session?.user?.email || !getUserPermissions(session.user.email).canDelete) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 

@@ -1,3 +1,10 @@
+import { recordUpload } from '../../lib/attachments';
+import os from 'os';
+import { randomUUID } from 'crypto';
+import { isValidDate } from '../../lib/validation';
+import { uploadDirectory, validatedUploadExtension } from '../../lib/uploads';
+import { getUserPermissions } from '../../lib/admin';
+import { isAllowedMutation } from '../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { IncomingForm, File } from 'formidable';
 import fs from 'fs';
@@ -14,7 +21,7 @@ export const config = {
 };
 
 // 업로드 디렉토리 생성
-const uploadBaseDir = path.join(process.cwd(), 'public', 'uploads');
+const uploadBaseDir = uploadDirectory;
 if (!fs.existsSync(uploadBaseDir)) {
   fs.mkdirSync(uploadBaseDir, { recursive: true });
 }
@@ -22,7 +29,8 @@ if (!fs.existsSync(uploadBaseDir)) {
 function normalizePostDate(input: unknown): { year: string; month: string; day: string } {
   const today = new Date().toISOString().split('T')[0];
   const raw = typeof input === 'string' ? input : Array.isArray(input) ? String(input[0] ?? '') : '';
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today;
+  if (raw && !isValidDate(raw)) throw new Error('Invalid date');
+  const date = raw || today;
   const [year, month, day] = date.split('-');
   return { year, month, day };
 }
@@ -57,11 +65,16 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ message: 'Forbidden origin' });
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   }
 
+  let tempDir: string | undefined;
   try {
     // 로그인 확인
     const session = await getServerSession(req, res, authOptions);
@@ -80,7 +93,7 @@ export default async function handler(
     }
 
     // 글쓰기 권한 확인
-    if (!session.permissions?.canWrite) {
+    if (!getUserPermissions(session.user.email).canWrite) {
       logAction({
         action: 'file.upload',
         outcome: 'denied',
@@ -93,8 +106,13 @@ export default async function handler(
       return res.status(403).json({ message: '파일 업로드 권한이 없습니다.' });
     }
 
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-upload-'));
     const form = new IncomingForm({
-      uploadDir: uploadBaseDir,
+      uploadDir: tempDir,
+      maxFiles: 1,
+      maxFields: 4,
+      maxFieldsSize: 1024,
+      maxTotalFileSize: MAX_FILE_SIZE,
       keepExtensions: true,
       maxFileSize: MAX_FILE_SIZE,
       multiples: false, // 한 번에 하나씩 업로드
@@ -164,8 +182,9 @@ export default async function handler(
     // 안전한 파일명 생성
     const timestamp = Date.now();
     const originalName = uploadedFile.originalFilename || 'file';
-    const ext = path.extname(originalName);
-    const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_')}`;
+    const ext = validatedUploadExtension(originalName, uploadedFile.mimetype!, uploadedFile.filepath);
+    if (!ext) return res.status(400).json({ message: '파일 확장자 또는 내용이 파일 형식과 일치하지 않습니다.' });
+    const safeName = `${timestamp}-${randomUUID()}${ext}`;
 
     const { year, month, day } = normalizePostDate((data.fields as any)?.postDate);
     const datedDir = path.join(uploadBaseDir, year, month, day);
@@ -177,7 +196,10 @@ export default async function handler(
     const newPath = path.join(datedDir, safeName);
 
     // 파일 이동
-    fs.renameSync(uploadedFile.filepath, newPath);
+    fs.copyFileSync(uploadedFile.filepath, newPath, fs.constants.COPYFILE_EXCL);
+    fs.unlinkSync(uploadedFile.filepath);
+    try { recordUpload(relativePath, session.user.email); }
+    catch (error) { fs.unlinkSync(newPath); throw error; }
 
     // 응답 데이터
     const fileData = {
@@ -224,9 +246,8 @@ export default async function handler(
     } catch {
       // no-op
     }
-    return res.status(500).json({ 
-      message: '파일 업로드 중 오류가 발생했습니다.',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(400).json({ message: '유효하지 않은 파일 업로드입니다.' });
+  } finally {
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }

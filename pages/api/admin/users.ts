@@ -1,3 +1,5 @@
+import { getUserPermissions } from '../../../lib/admin';
+import { isAllowedMutation } from '../../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
@@ -9,6 +11,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<UserManagementApiResponse>
 ) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ success: false, message: 'Forbidden origin' });
+  }
+
   try {
     // 세션 확인
     const session = await getServerSession(req, res, authOptions);
@@ -21,7 +27,7 @@ export default async function handler(
     }
 
     // 관리자 권한 확인
-    const permissions = (session as any).permissions;
+    const permissions = getUserPermissions(session.user.email);
     if (!permissions || !permissions.canDelete) {
       return res.status(403).json({ 
         success: false,
@@ -44,7 +50,7 @@ export default async function handler(
 
     // PUT: 사용자 역할 업데이트
     if (req.method === 'PUT') {
-      const { email, role } = req.body;
+      const { email, role } = req.body || {};
 
       if (!email || !role) {
         return res.status(400).json({ 
@@ -74,7 +80,7 @@ export default async function handler(
       if (result.success) {
         return res.status(200).json({ 
           success: true,
-          message: '사용자 역할이 업데이트되었습니다. 변경사항을 적용하려면 해당 사용자가 다시 로그인해야 합니다.' 
+          message: '사용자 역할이 업데이트되었습니다. 다음 요청부터 변경된 권한이 적용됩니다.'
         });
       } else {
         return res.status(500).json({ 

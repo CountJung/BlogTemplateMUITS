@@ -34,7 +34,7 @@ interface FileUploaderProps {
 const FileUploader: React.FC<FileUploaderProps> = ({
   attachments,
   onAttachmentsChange,
-  maxFiles = 1000,
+  maxFiles = 30,
   postDate,
 }) => {
   const { t, language } = useLanguage();
@@ -59,7 +59,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   // 파일 업로드 처리
-  const uploadFile = async (file: File): Promise<FileAttachment | null> => {
+  const uploadFile = useCallback(async (file: File): Promise<FileAttachment | null> => {
     const formData = new FormData();
     formData.append('file', file);
     if (postDate) {
@@ -85,7 +85,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       setError(t('uploadError'));
       return null;
     }
-  };
+  }, [postDate, t]);
 
   // 파일 선택/드롭 처리
   const handleFiles = useCallback(async (files: FileList | null) => {
@@ -122,7 +122,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
     setUploading(false);
     setUploadProgress(0);
-  }, [attachments, maxFiles, onAttachmentsChange]);
+  }, [attachments, maxFiles, onAttachmentsChange, t, uploadFile]);
 
   // 드래그 이벤트 핸들러
   const handleDragEnter = useCallback((e: React.DragEvent) => {

@@ -1,17 +1,27 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]';
+import { getUserPermissions } from '../../../lib/admin';
+import { isAllowedMutation } from '../../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSystemSettings, updateSystemSettings } from '../../../lib/settings';
 import { initScheduler } from '../../../lib/scheduler';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'POST') {
+    if (!isAllowedMutation(req)) return res.status(403).json({ message: 'Forbidden origin' });
+    const session = await getServerSession(req, res, authOptions);
+    if (!session?.user?.email) return res.status(401).json({ message: '로그인이 필요합니다.' });
+    if (!getUserPermissions(session.user.email).canDelete) return res.status(403).json({ message: '관리자 권한이 필요합니다.' });
+  }
   if (req.method === 'GET') {
     const settings = getSystemSettings();
     res.status(200).json(settings);
   } else if (req.method === 'POST') {
     try {
-      const { logRetentionDays, scheduler } = req.body;
+      const { logRetentionDays, scheduler } = req.body || {};
       
       // Basic validation
-      if (typeof logRetentionDays !== 'number' || logRetentionDays < 1) {
+      if (!Number.isSafeInteger(logRetentionDays) || logRetentionDays < 1 || logRetentionDays > 3650) {
         return res.status(400).json({ message: 'Invalid logRetentionDays' });
       }
       
@@ -20,13 +30,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       }
 
       const { hour, minute, second } = scheduler;
-      if (typeof hour !== 'number' || hour < 0 || hour > 23) {
+      if (!Number.isSafeInteger(hour) || hour < 0 || hour > 23) {
          return res.status(400).json({ message: 'Invalid hour' });
       }
-      if (typeof minute !== 'number' || minute < 0 || minute > 59) {
+      if (!Number.isSafeInteger(minute) || minute < 0 || minute > 59) {
          return res.status(400).json({ message: 'Invalid minute' });
       }
-      if (typeof second !== 'number' || second < 0 || second > 59) {
+      if (!Number.isSafeInteger(second) || second < 0 || second > 59) {
          return res.status(400).json({ message: 'Invalid second' });
       }
 

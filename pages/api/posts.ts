@@ -1,3 +1,7 @@
+import { canAttachFiles } from '../../lib/attachments';
+import { validatePostInput } from '../../lib/validation';
+import { getUserPermissions } from '../../lib/admin';
+import { isAllowedMutation } from '../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
@@ -6,6 +10,10 @@ import { PostsApiResponse, PostFormData } from '../../types/blog';
 import { getClientIp, logAction } from '../../lib/logger';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<PostsApiResponse>) {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '') && !isAllowedMutation(req)) {
+    return res.status(403).json({ message: 'Forbidden origin' });
+  }
+
   if (req.method === 'POST') {
     try {
       // 사용자 인증 확인
@@ -28,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }
 
       // 글쓰기 권한 확인 (Writer 또는 Admin만 허용)
-      const permissions = session.permissions;
+      const permissions = getUserPermissions(session.user.email);
       if (!permissions || !permissions.canWrite) {
         logAction({
           action: 'post.create',
@@ -45,11 +53,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }
 
       // 작성자 이메일 추가
+      const body = req.body || {};
+      const invalid = validatePostInput(body);
+      if (invalid) return res.status(400).json({ message: invalid });
       const postData: PostFormData = {
-        ...req.body,
-        authorEmail: session.user.email,
+        id: body.id, title: body.title, content: body.content,
+        date: body.date, tags: body.tags || [],
+        excerpt: body.excerpt || body.content.substring(0, 200) + '...',
+        attachments: body.attachments || [], views: 0,
+        author: session.user.name || '익명', authorEmail: session.user.email,
       };
 
+      if (!canAttachFiles(postData.attachments || [], session.user.email)) return res.status(403).json({ message: '첨부파일을 사용할 권한이 없습니다.' });
       const result = savePost(postData);
       
       if (result.success) {
@@ -80,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           target: { type: 'post' },
           error: result.error || 'save_failed',
         });
-        res.status(500).json({ 
+        res.status(result.error === 'Post already exists' ? 409 : 500).json({
           message: result.error || '게시글 저장 중 오류가 발생했습니다.' 
         });
       }

@@ -16,10 +16,12 @@ export interface CommentFormData {
   content: string;
 }
 
+export type PublicComment = Omit<Comment, 'authorEmail'> & { canDelete: boolean };
+
 export interface CommentApiResponse {
   success: boolean;
-  comment?: Comment;
-  comments?: Comment[];
+  comment?: PublicComment;
+  comments?: PublicComment[];
   message?: string;
   error?: string;
 }
