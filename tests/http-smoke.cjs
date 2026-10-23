@@ -39,7 +39,7 @@ async function main() {
     const secret = 'synthetic-local-http-test-secret-with-no-real-account';
     child = spawn(process.execPath, [path.join(runtime, 'server.js')], { cwd: runtime, env: { ...process.env,
       NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: String(port), NEXTAUTH_URL: origin, NEXTAUTH_SECRET: secret,
-      ADMIN_EMAILS: 'admin@example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic', NEXT_TELEMETRY_DISABLED: '1', __NEXT_SHOW_IGNORE_LISTED: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
+      ADMIN_EMAILS: 'admin@example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic', NEXT_TELEMETRY_DISABLED: '1', RATE_LIMIT_VIEW_MAX: '4', RATE_LIMIT_UPLOAD_MAX: '4', RATE_LIMIT_POST_WRITE_MAX: '3', RATE_LIMIT_COMMENT_WRITE_MAX: '1', RATE_LIMIT_COMMENT_READ_MAX: '1', RATE_LIMIT_FILE_MAX: '2', TRUST_PROXY_HOPS: '0', __NEXT_SHOW_IGNORE_LISTED: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.on('data', data => { output += data; }); child.stderr.on('data', data => { output += data; });
     let ready = false;
     for (let i = 0; i < 100; i++) {
@@ -50,8 +50,8 @@ async function main() {
     assert.ok(ready, output.slice(0, 3000));
     const cookies = {};
     for (const name of ['admin', 'writer', 'reader', 'other', 'banned']) cookies[name] = `next-auth.session-token=${await encode({ secret, token: { email: `${name}@example.test`, name, sub: name } })}`;
-    const request = async (route, { user, method = 'GET', body, foreign = false, multipart } = {}) => fetch(origin + route, {
-      method, headers: { ...(user ? { Cookie: cookies[user] } : {}), ...(method !== 'GET' ? { Origin: foreign ? 'https://foreign.example.test' : origin } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+    const request = async (route, { user, method = 'GET', body, foreign = false, multipart, forwarded } = {}) => fetch(origin + route, {
+      method, headers: { ...(forwarded ? { 'X-Forwarded-For': forwarded } : {}), ...(user ? { Cookie: cookies[user] } : {}), ...(method !== 'GET' ? { Origin: foreign ? 'https://foreign.example.test' : origin } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       body: multipart || (body === undefined ? undefined : JSON.stringify(body)), redirect: 'manual',
     });
     for (const endpoint of ['system', 'language']) {
@@ -78,6 +78,10 @@ async function main() {
     check((await request('/api/posts/missing/view', { method: 'POST' })).status, 404);
     check((await (await request('/api/posts/synthetic-0/view', { method: 'POST' })).json()).incremented, true);
     check((await (await request('/api/posts/synthetic-0/view', { method: 'POST' })).json()).incremented, false);
+    check((await request('/api/posts/missing/view', { method: 'POST', forwarded: '203.0.113.1' })).status, 404);
+    const limited = await request('/api/posts/missing/view', { method: 'POST', forwarded: '203.0.113.2' });
+    check(limited.status, 429); check(Number(limited.headers.get('retry-after')) > 0, true);
+    check(limited.headers.get('cache-control').includes('no-store'), true);
     const detail = await request('/blog/synthetic-0'); check(detail.status, 200); check((await detail.text()).includes('authorEmail'), false);
     check((await request('/blog/edit/synthetic-0')).status, 307);
     check((await request('/blog/edit/synthetic-0', { user: 'other' })).status, 404);
@@ -102,14 +106,24 @@ async function main() {
     const file = await request(uploadedData.file.url); check(file.status, 200); check(await file.text(), 'Synthetic text'); assert.match(file.headers.get('content-disposition'), /^attachment/); checks++;
     const spoof = new FormData(); spoof.set('file', new Blob(['<html>synthetic</html>'], { type: 'text/plain' }), 'fixture.html');
     check((await request('/api/upload', { user: 'writer', method: 'POST', multipart: spoof })).status, 400);
+    const invalidZip = new FormData(); invalidZip.set('file', new Blob(['PK\x03\x04fake'], { type: 'application/zip' }), 'fixture.zip');
+    check((await request('/api/upload', { user: 'writer', method: 'POST', multipart: invalidZip })).status, 400);
     const tooMany = new FormData(); tooMany.append('file', new Blob(['one'], { type: 'text/plain' }), 'one.txt'); tooMany.append('file', new Blob(['two'], { type: 'text/plain' }), 'two.txt');
     check((await request('/api/upload', { user: 'writer', method: 'POST', multipart: tooMany })).status, 400);
     const legacy = await request('/uploads/legacy.html'); check(legacy.status, 200); assert.match(legacy.headers.get('content-disposition'), /^attachment/); checks++;
     assert.match(legacy.headers.get('content-security-policy'), /sandbox/); checks++;
+    check((await request('/api/files/missing.txt', { forwarded: '203.0.113.3' })).status, 429);
+    check((await request('/api/upload', { user: 'writer', method: 'POST' })).status, 429);
+    check((await request('/api/comments/synthetic-0')).status, 200);
+    check((await request('/api/comments/synthetic-0')).status, 429);
+    check((await request('/api/comments/synthetic-0', { method: 'POST', body: { content: 'Synthetic comment' }, user: 'writer' })).status, 201);
+    check((await request('/api/comments/synthetic-0', { method: 'POST', body: { content: 'Repeated comment' }, user: 'writer' })).status, 429);
+    check((await request('/api/comments/synthetic-0', { method: 'POST', body: { content: 'Separate account' }, user: 'reader' })).status, 201);
     const posted = { id: 'created-http', title: 'Synthetic created', content: 'Synthetic', date: '2026-10-23', tags: [], attachments: [] };
     check((await request('/api/posts', { method: 'POST', body: posted, user: 'writer' })).status, 201);
     check((await request('/api/posts', { method: 'POST', body: posted, user: 'other' })).status, 409);
     check((await request('/api/delete-post?id=created-http', { method: 'DELETE', user: 'writer' })).status, 200);
+    check((await request('/api/posts', { method: 'POST', body: { ...posted, id: 'rate-limited-http' }, user: 'writer' })).status, 429);
     console.log(`HTTP smoke passed: ${checks} assertions; isolated standalone runtime; 23 synthetic posts; real signed local sessions and multipart requests.`);
     if (process.argv.includes('--preview')) {
       console.log(`Synthetic UI preview: ${origin}`);

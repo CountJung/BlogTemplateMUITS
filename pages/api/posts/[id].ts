@@ -1,3 +1,4 @@
+import { allowRequest } from '../../../lib/rate-limit';
 import { canAttachFiles } from '../../../lib/attachments';
 import { canManagePost } from '../../../lib/public-posts';
 import { isValidPostId, validatePostInput } from '../../../lib/validation';
@@ -72,6 +73,8 @@ export default async function handler(
         });
         return res.status(403).json({ message: '게시글을 수정할 권한이 없습니다.' });
       }
+
+      if (!allowRequest(req, res, 'POST_WRITE', session.user.email)) return;
 
       try {
         const invalid = validatePostInput({ ...req.body, id });

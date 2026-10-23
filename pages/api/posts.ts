@@ -1,3 +1,4 @@
+import { allowRequest } from '../../lib/rate-limit';
 import { canAttachFiles } from '../../lib/attachments';
 import { validatePostInput } from '../../lib/validation';
 import { getUserPermissions } from '../../lib/admin';
@@ -51,6 +52,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           message: '글쓰기 권한이 없습니다.' 
         });
       }
+
+      if (!allowRequest(req, res, 'POST_WRITE', session.user.email)) return;
 
       // 작성자 이메일 추가
       const body = req.body || {};

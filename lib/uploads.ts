@@ -1,3 +1,4 @@
+import { isSafeArchive } from './archive-validation';
 import fs from 'fs';
 import path from 'path';
 import { isSafeUploadPath } from './validation';
@@ -27,7 +28,7 @@ export function validatedUploadExtension(name: string, mime: string, file: strin
   if (mime === 'image/gif' && !['GIF87a', 'GIF89a'].includes(head.subarray(0, 6).toString())) return null;
   if (mime === 'image/webp' && (head.subarray(0, 4).toString() !== 'RIFF' || head.subarray(8, 12).toString() !== 'WEBP')) return null;
   if (mime === 'application/pdf' && head.subarray(0, 5).toString() !== '%PDF-') return null;
-  if (['.zip', '.docx', '.xlsx'].includes(extension) && head.subarray(0, 4).toString('hex') !== '504b0304') return null;
+  if (['.zip', '.docx', '.xlsx'].includes(extension) && !isSafeArchive(file, extension)) return null;
   if (['.doc', '.xls'].includes(extension) && head.subarray(0, 8).toString('hex') !== 'd0cf11e0a1b11ae1') return null;
   return extension;
 }

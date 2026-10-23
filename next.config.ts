@@ -1,3 +1,4 @@
+import { securityHeaders } from './lib/security-headers';
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
@@ -7,19 +8,14 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     instrumentation: ['./logs/**/*'],
     'next-server': ['./logs/**/*'],
-    '/*': ['./data/**/*', './content/posts/**/*', './logs/**/*', './public/uploads/**/*', './.env*', './docs/**/*', './tests/**/*', './lib/*.ts', './pages/**/*.ts', './pages/**/*.tsx', './scripts/inspect-attachments.cjs', './scripts/check-standalone.cjs'],
+    '/*': ['./data/**/*', './content/posts/**/*', './logs/**/*', './public/uploads/**/*', './.env*', './docs/**/*', './tests/**/*', './lib/*.ts', './pages/**/*.ts', './pages/**/*.tsx', './scripts/inspect-storage.cjs', './scripts/inspect-attachments.cjs', './scripts/check-standalone.cjs'],
   },
   poweredByHeader: false,
   async rewrites() {
     return { beforeFiles: [{ source: '/uploads/:path*', destination: '/api/files/:path*' }] };
   },
   async headers() {
-    return [{ source: '/:path*', headers: [
-      { key: 'X-Content-Type-Options', value: 'nosniff' },
-      { key: 'X-Frame-Options', value: 'DENY' },
-      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-      { key: 'Content-Security-Policy', value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'" },
-    ] }];
+    return [{ source: '/:path*', headers: securityHeaders(process.env.CSP_STRICT_REPORT_ONLY === '1') }];
   },
 }
 

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import type { NextApiRequest } from 'next';
+export { getClientIp } from './client-ip';
 
 const LOG_DIR = path.join(process.cwd(), 'logs');
 
@@ -75,21 +75,6 @@ function safeJsonStringify(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-export function getClientIp(req: NextApiRequest): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  const realIp = req.headers['x-real-ip'];
-
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-
-  if (typeof realIp === 'string') {
-    return realIp;
-  }
-
-  return req.socket.remoteAddress || '127.0.0.1';
 }
 
 export type ActionLog = {

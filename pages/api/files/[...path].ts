@@ -1,3 +1,4 @@
+import { allowRequest } from '../../../lib/rate-limit';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', ['GET']);
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   }
+  if (!allowRequest(req, res, 'FILE')) return;
   const parts = req.query.path;
   if (!Array.isArray(parts)) return res.status(400).json({ message: '파일 경로가 필요합니다.' });
   try {

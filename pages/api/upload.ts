@@ -1,3 +1,4 @@
+import { allowRequest } from '../../lib/rate-limit';
 import { recordUpload } from '../../lib/attachments';
 import os from 'os';
 import { randomUUID } from 'crypto';
@@ -105,6 +106,8 @@ export default async function handler(
       });
       return res.status(403).json({ message: '파일 업로드 권한이 없습니다.' });
     }
+
+    if (!allowRequest(req, res, 'UPLOAD', session.user.email)) return;
 
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-upload-'));
     const form = new IncomingForm({

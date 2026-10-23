@@ -1,3 +1,4 @@
+import { allowRequest } from '../../lib/rate-limit';
 import { isValidPostId } from '../../lib/validation';
 import { isAllowedMutation } from '../../lib/request-security';
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -83,6 +84,8 @@ export default async function handler(
         message: '이 게시글을 삭제할 권한이 없습니다. 자신이 작성한 글만 삭제할 수 있습니다.' 
       });
     }
+
+    if (!allowRequest(req, res, 'POST_WRITE', userEmail)) return;
 
     // 게시글 삭제
     const result = deletePost(id, post.authorEmail);

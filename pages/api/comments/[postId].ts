@@ -1,3 +1,4 @@
+import { allowRequest } from '../../../lib/rate-limit';
 import { isValidPostId } from '../../../lib/validation';
 import { getUserPermissions } from '../../../lib/admin';
 import { isAllowedMutation } from '../../../lib/request-security';
@@ -29,6 +30,8 @@ export default async function handler(
   if (!isValidPostId(postId)) {
     return res.status(400).json({ success: false, error: '유효하지 않은 게시글 ID입니다.' });
   }
+
+  if (req.method === 'GET' && !allowRequest(req, res, 'COMMENT_READ')) return;
 
   // 게시글 존재 여부 확인
   const post = getPostById(postId);
@@ -84,6 +87,8 @@ export default async function handler(
         });
         return res.status(403).json({ success: false, error: '댓글 작성 권한이 없습니다. 관리자에게 문의하세요.' });
       }
+
+      if (!allowRequest(req, res, 'COMMENT_WRITE', session.user.email)) return;
 
       try {
         const { content } = req.body || {};
@@ -191,6 +196,7 @@ export default async function handler(
           return res.status(403).json({ success: false, error: '댓글을 삭제할 권한이 없습니다.' });
         }
 
+        if (!allowRequest(req, res, 'COMMENT_WRITE', session.user.email)) return;
         const result = deleteComment(postId, commentId);
 
         if (!result.success) {

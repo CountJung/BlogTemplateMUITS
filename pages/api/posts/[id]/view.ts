@@ -1,3 +1,5 @@
+import { getClientIp } from '../../../../lib/client-ip';
+import { allowRequest } from '../../../../lib/rate-limit';
 import { withStoreLock } from '../../../../lib/storage';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
@@ -6,24 +8,6 @@ import { addViewRecord } from '../../../../lib/views';
 import { incrementViews, getPostById } from '../../../../lib/posts';
 import { isValidPostId } from '../../../../lib/validation';
 import { isAllowedMutation } from '../../../../lib/request-security';
-
-// IP 주소 추출 함수
-function getClientIp(req: NextApiRequest): string {
-  // Vercel, Netlify 등의 프록시 환경 고려
-  const forwarded = req.headers['x-forwarded-for'];
-  const realIp = req.headers['x-real-ip'];
-  
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  
-  if (typeof realIp === 'string') {
-    return realIp;
-  }
-  
-  // 로컬 개발 환경
-  return req.socket.remoteAddress || '127.0.0.1';
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,6 +19,7 @@ export default async function handler(
   }
   if (!isAllowedMutation(req)) return res.status(403).json({ message: 'Forbidden origin' });
 
+  if (!allowRequest(req, res, 'VIEW')) return;
   const { id } = req.query;
 
   if (!isValidPostId(id)) {
