@@ -33,6 +33,9 @@ async function main() {
     fs.writeFileSync(path.join(runtime, 'data/users.json'), JSON.stringify(users));
     fs.mkdirSync(path.join(runtime, 'public/uploads'), { recursive: true });
     fs.writeFileSync(path.join(runtime, 'public/uploads/legacy.html'), '<html>synthetic active content</html>');
+    // Harmless local fixtures, not a reproduction of the advisory's bypass payload.
+    fs.writeFileSync(path.join(runtime, 'public/optimizer-fixture.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="red"/></svg>');
+    fs.writeFileSync(path.join(runtime, 'public/optimizer-fixture.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'));
     const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening');
     const port = listener.address().port; await new Promise(resolve => listener.close(resolve));
     const origin = `http://127.0.0.1:${port}`;
@@ -54,6 +57,12 @@ async function main() {
       method, headers: { ...(forwarded ? { 'X-Forwarded-For': forwarded } : {}), ...(user ? { Cookie: cookies[user] } : {}), ...(method !== 'GET' ? { Origin: foreign ? 'https://foreign.example.test' : origin } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       body: multipart || (body === undefined ? undefined : JSON.stringify(body)), redirect: 'manual',
     });
+    const rejectedSvg = await request('/_next/image?url=%2Foptimizer-fixture.svg&w=64&q=75');
+    check(rejectedSvg.status, 400);
+    assert.match(await rejectedSvg.text(), /not allowed/i); checks++;
+    const optimizedPng = await request('/_next/image?url=%2Foptimizer-fixture.png&w=64&q=75');
+    check(optimizedPng.status, 200);
+    assert.match(optimizedPng.headers.get('content-type'), /^image\//); checks++;
     for (const endpoint of ['system', 'language']) {
       const route = `/api/settings/${endpoint}`;
       const body = endpoint === 'system' ? { logRetentionDays: 30, scheduler: { hour: 23, minute: 0, second: 0 } } : { language: 'en' };

@@ -260,6 +260,51 @@ fallback, 창 만료·bucket 상한·제한 설정과 report-only CSP 헤더를 
 이후 fallback 회귀 1개 추가에 맞춰 테스트 수를 33개로 갱신했으며 링크·표 구조는 바꾸지 않았다.
 형식 검사는 반복하지 않았고 내용 검토는 위의 별도 절차로 완료했다.
 
+## 2026-11-17 외장 작업본 보안 패치 검증
+
+외장 프로젝트 폴더에 기존 작업본이 없음을 확인한 뒤 GitHub `main`의
+`40bfcd11e362525eb67e2365deaedb9934bdd1b1`에서 새로 복제했다.
+기존 사용자 작업본·변경은 덮어쓰지 않았다. 검증 환경은 macOS·Node.js v26.12.1·npm 11.20.0이다.
+
+[Next.js 공식 보안 공지 GHSA-7qx7-33qx-rqx2](https://github.com/vercel/next.js/security/advisories/GHSA-7qx7-33qx-rqx2)의
+영향 범위(16.0.0–16.4.4)와 수정 버전(16.4.5)을 대조했다.
+Next.js를 16.4.1에서 같은 minor의 16.4.6으로 올리고 선언 범위를 `~16.4.6`으로 고정했다.
+이는 self-hosted 이미지 최적화의 SVG 처리 관련 패치이며 실제 배포 버전이 갱신됐다는 의미는 아니다.
+
+`npm audit fix --ignore-scripts`로 호환 범위의 개발 도구 의존성을 보완했다.
+11개 변경·3개 추가·2개 제거 후 총 397개 패키지 audit에서 취약점 0건을 확인했다.
+주요 결과는 ESLint 10.15.0·TypeScript ESLint parser 8.73.0·minimatch 11.0.9이다.
+최종 잠금 파일로 `npm ci --ignore-scripts`를 재실행해 설치 재현성과 audit 0건을 확인했고,
+lint·타입·33개 단위 회귀도 다시 통과했다.
+audit 결과는 조회 시점의 알려진 취약점 기준이며 모든 보안 결함이 없다는 보장은 아니다.
+
+| 절차 | 입력·범위 | 이번 결과 |
+| --- | --- | --- |
+| `npm test` | 임시 합성 입력·저장소·API 회귀 | 33/33 통과 |
+| `npm run lint` | 현재 ESLint 규칙 | 오류 0·경고 0 |
+| `npm run type-check` | 최종 TypeScript 변경 트리 | 통과 |
+| `npm run build` | production·standalone 패키징 정책 | 통과 |
+| `npm run test:http` | 격리 standalone·합성 23글·로컬 서명 세션·multipart | 79개 assertion 통과 |
+| 독립 코드 리뷰 | 최신 lockfile의 Node 호환·HTTP 회귀 변경 | 차단 결함 없음 |
+| Hermes 교차 검토 | Gateway 접근 시도 | `Gateway inaccessible: authorization`으로 미실행·독립 리뷰로 대체 |
+| 실제 배포·NAS 변경·실제 OAuth·운영 자료 | 이번 요청 범위 밖 | 미실행 |
+
+[HTTP 회귀](../tests/http-smoke.cjs)는 기존 75개 검사에 4개를 추가했다.
+격리 임시 public 폴더의 스크립트·외부 참조 없는 합성 SVG에 대해 이미지 최적화 응답 400과
+`not allowed` 메시지, 합성 PNG에 대해 200과 `image/*` Content-Type을 확인했다.
+정상 PNG 허용과 기본 SVG 거부 정책의 회귀이며 공지의 우회 payload나 공격 재현 검사는 아니다.
+실제 브라우저·운영 프록시·운영 이미지 endpoint 및 실제 Google OAuth는 검증하지 않았다.
+배포 버전·환경과 실제 운영 확인은 [OPS-001·OPS-002](TODO.md)에 남긴다.
+
+이번 결과는 `/tmp/blog-{test,lint,type,build,http}-20261117.log`의 실행 기록과 대조했다.
+이전 회차의 성공 수치를 이번 검증으로 재사용하지 않았다.
+커밋·원격 반영과 CI 결과는 이 절의 로컬 검증과 별도로 확인해야 한다.
+
+문서 내용 검토는 새 검증 근거와 설명의 일치, 기존 고유 이력 보존, TODO의 운영 경계를 확인했다.
+원본 docs-canon 검사기는 로컬 스킬 경로에서 찾지 못했다.
+대신 이번 변경 문서 2개의 상대 링크 대상 존재와 Markdown 표 열 수를 제한된 대체 검사로 1회 확인했다.
+이 대체 검사는 원본 검사기의 앵커·등록부 도달성·전체 문서 규칙을 검증한 결과가 아니다.
+
 ## 완료 이력
 
 | ID | 변경과 확인 근거 |
@@ -269,6 +314,7 @@ fallback, 창 만료·bucket 상한·제한 설정과 report-only CSP 헤더를 
 | DATA-001 | 서버 검색·태그·페이지별 요약 DTO, 공개 글·댓글에서 작성자 이메일 제거, 서버 계산 capability로 관리 UI 유지. 합성 23글·최대 10글 페이지 검증 |
 | SEC-003 | 공통 nosniff·프레임 차단·referrer·CSP 및 파일 sandbox 헤더, 레거시 /uploads API rewrite 추가. 로컬 HTTP 범위 검증, 운영 프록시 별도 확인 |
 | DEP-001 | 공지와 조건 대조 후 lockfile 의존성 갱신. 최종 audit 0건. 소스의 Pages Router 조건과 운영 배포 미확인을 구분 |
+| DEP-002 | 2026-11-17 Next.js 16.4.6 보안 패치·개발 도구 audit 0건·합성 SVG 거부 및 PNG 허용 HTTP 회귀. 위 신규 절의 로컬 검증 범위이며 운영 배포는 미실행 |
 | DOC-001 | 루트 진입점·docs 정본 책임 구축과 기존 고유 자료 보존. 내용 검토와 원본 형식 검사 결과는 위 절 참조 |
 | STORE-001 | 공유 로컬 파일시스템 쓰기 잠금·파일 원자 교체, 조회수·소유자 보존과 삭제 재검사. 2차 저장 회귀 6개 통과. STORE-002 운영 경계는 미완료 |
 | BUILD-001 | Next.js 추적 경고 10→0, runtime·비밀·프로젝트 소스 제외와 생성 산출물 guard. 최신 build와 최소 standalone HTTP 62개 assertion 통과 |
