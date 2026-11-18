@@ -1,4 +1,4 @@
-// Run after npm run build. Copies the standalone server into an isolated synthetic runtime.
+// Run after npm run build:standalone. Copies the standalone server into an isolated synthetic runtime.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -31,7 +31,8 @@ async function selectPort(preview) {
 
 async function main() {
   const preview = process.argv.includes('--preview');
-  assert.ok(fs.existsSync(path.join(root, '.next/standalone/server.js')), 'Run npm run build first.');
+  const production = process.argv.includes('--production');
+  assert.ok(fs.existsSync(path.join(root, production ? '.next/BUILD_ID' : '.next-standalone/standalone/server.js')), production ? 'Run npm run build first.' : 'Run npm run build:standalone first.');
   const previewPort = preview ? await selectPort(true) : null;
   const runtime = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-http-'));
   let child;
@@ -39,13 +40,19 @@ async function main() {
   let checks = 0;
   const check = (actual, expected) => { assert.equal(actual, expected); checks++; };
   try {
-    fs.cpSync(path.join(root, '.next/standalone'), runtime, { recursive: true, verbatimSymlinks: true });
+    if (production) {
+      fs.cpSync(path.join(root, '.next'), path.join(runtime, '.next'), { recursive: true, filter: source => !['cache', 'standalone'].includes(path.basename(source)) });
+      fs.symlinkSync(path.join(root, 'node_modules'), path.join(runtime, 'node_modules'), 'junction');
+      fs.copyFileSync(path.join(root, 'package.json'), path.join(runtime, 'package.json'));
+    } else {
+      fs.cpSync(path.join(root, '.next-standalone/standalone'), runtime, { recursive: true, verbatimSymlinks: true });
+    }
     for (const directory of ['lib', 'pages', 'components', 'contexts', 'docs', 'tests', 'data', 'content', 'logs']) {
       assert.equal(fs.existsSync(path.join(runtime, directory)), false, `Standalone unexpectedly contains ${directory}`); checks++;
     }
     assert.equal(fs.readdirSync(runtime).some(name => name.startsWith('.env')), false); checks++;
-    fs.mkdirSync(path.join(runtime, '.next/static'), { recursive: true });
-    fs.cpSync(path.join(root, '.next/static'), path.join(runtime, '.next/static'), { recursive: true });
+    fs.mkdirSync(path.join(runtime, production ? '.next/static' : '.next-standalone/static'), { recursive: true });
+    fs.cpSync(path.join(root, production ? '.next/static' : '.next-standalone/static'), path.join(runtime, production ? '.next/static' : '.next-standalone/static'), { recursive: true });
     fs.mkdirSync(path.join(runtime, 'content/posts/2026/10/23'), { recursive: true });
     for (let i = 0; i < 23; i++) fs.writeFileSync(path.join(runtime, `content/posts/2026/10/23/synthetic-${i}.md`), matter.stringify(`Synthetic full body unique_${i}_end`, {
       title: `Synthetic ${i}`, author: 'Synthetic writer', authorEmail: 'writer@example.test', date: '2026-10-23', excerpt: 'Synthetic excerpt', tags: ['synthetic'], views: 0, attachments: [],
@@ -69,7 +76,8 @@ async function main() {
     for (const key of Object.keys(runtimeEnv)) {
       if (key.startsWith('RATE_LIMIT_')) delete runtimeEnv[key];
     }
-    child = spawn(process.execPath, [path.join(runtime, 'server.js')], { cwd: runtime, env: { ...runtimeEnv,
+    const args = production ? [require.resolve('next/dist/bin/next'), 'start', '--hostname', LOOPBACK, '--port', String(port)] : [path.join(runtime, 'server.js')];
+    child = spawn(process.execPath, args, { cwd: runtime, env: { ...runtimeEnv,
       NODE_ENV: 'production', HOSTNAME: LOOPBACK, PORT: String(port), NEXTAUTH_URL: origin, NEXTAUTH_SECRET: secret,
       ADMIN_EMAILS: 'admin@example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic',
       NEXT_TELEMETRY_DISABLED: '1', ...(!preview ? rateLimits : {}), TRUST_PROXY_HOPS: '0', __NEXT_SHOW_IGNORE_LISTED: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -183,7 +191,7 @@ async function main() {
     check((await request('/api/posts', { method: 'POST', body: posted, user: 'other' })).status, 409);
     check((await request('/api/delete-post?id=created-http', { method: 'DELETE', user: 'writer' })).status, 200);
     check((await request('/api/posts', { method: 'POST', body: { ...posted, id: 'rate-limited-http' }, user: 'writer' })).status, 429);
-    console.log(`HTTP smoke passed: ${checks} assertions; isolated standalone runtime; 23 synthetic posts; real signed local sessions and multipart requests.`);
+    console.log(`HTTP smoke passed: ${checks} assertions; isolated ${production ? 'production next start' : 'standalone'} runtime; 23 synthetic posts; real signed local sessions and multipart requests.`);
   } catch (error) {
     if (output) console.error(output.slice(-4000));
     throw error;

@@ -2,9 +2,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const output = path.join(process.cwd(), '.next', 'standalone');
+const output = path.join(process.cwd(), '.next-standalone', 'standalone');
 assert.ok(fs.existsSync(path.join(output, 'server.js')), 'Expected the generated standalone server');
-assert.ok(fs.existsSync(path.join(output, '.next', 'required-server-files.json')), 'Expected Next.js build metadata');
+assert.ok(fs.existsSync(path.join(output, '.next-standalone', 'required-server-files.json')), 'Expected Next.js build metadata');
 const runtimePaths = ['data', 'content', 'logs', 'public/uploads', ...fs.readdirSync(output).filter(name => name.startsWith('.env'))];
 const removed = [];
 for (const relative of runtimePaths) {

@@ -35,3 +35,13 @@ test('full stack waits for readiness and closes the Chrome debug session on stop
   assert.match('✓ Ready in 83ms', ready);
   assert.doesNotMatch('- Local: http://localhost:65002\nError: listen EADDRINUSE', ready);
 });
+
+test('production start and synthetic preview are separate commands and build outputs', () => {
+  assert.equal(scripts.start, 'next start -p 65002');
+  assert.equal(scripts.preview, 'node tests/http-smoke.cjs --preview');
+  assert.equal(scripts.build, 'node scripts/build.cjs');
+  assert.equal(scripts['build:standalone'], 'node scripts/build.cjs --standalone');
+  assert.match(read('next.config.ts'), /distDir: '\.next-standalone'/);
+  assert.match(read('scripts/build.cjs'), /BLOG_STANDALONE_BUILD: standalone \? '1' : '0'/);
+  assert.match(read('tests/http-smoke.cjs'), /root, '\.next-standalone\/standalone'/);
+});

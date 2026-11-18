@@ -24,10 +24,25 @@ npm.cmd run type-check
 npm.cmd run lint
 npm.cmd test
 npm.cmd run build
-npm.cmd run test:http
+npm.cmd run test:production
 npm.cmd start
 ```
 
+`build`는 일반 운영용 `.next`를 만들고, `start`는 프로젝트 루트에서
+`next start -p 65002`로 실행한다. 기존 운영 환경변수·게시글·데이터를 사용하므로
+합성 데이터 검증 명령이 아니다. 기존 `.env`나 운영 설정을 예제로 덮어쓰지 않는다.
+
+합성 데이터로 분리된 HTTP 회귀 또는 미리보기가 필요하면 별도 산출물을 사용한다.
+
+```powershell
+npm.cmd run build:standalone
+npm.cmd run test:http
+npm.cmd run preview
+```
+
+`build:standalone`은 일반 `.next`와 별개인 `.next-standalone`을 만든다.
+`test:http`는 검증 후 종료하고, `preview`는 Ctrl+C까지 합성 미리보기를 유지한다.
+이 명령들은 일반 운영 빌드·시작을 대체하지 않는다.
 Windows 외 환경에서는 `npm`을 사용한다.
 
 실행 결과와 미검증 조건은 [검증 기록](docs/verification.md)을 확인한다.
@@ -41,8 +56,9 @@ Windows 외 환경에서는 `npm`을 사용한다.
 F5 전에 이 프로젝트의 `npm run dev`를 따로 실행하지 않는다.
 
 개발 및 로컬 Google OAuth는 [http://localhost:65002](http://localhost:65002)를 그대로 사용한다.
-`npm start`는 빌드 후 [http://127.0.0.1:65003](http://127.0.0.1:65003)에서
-별도 합성 미리보기를 실행하므로 개발 서버와 동시에 사용할 수 있다. 미리보기 종료는 Ctrl+C다.
+`npm start`는 일반 빌드 후 65002에서 운영 모드로 실행하므로 개발 서버와 동시에 실행하지 않는다.
+`npm run preview`는 별도 standalone 빌드 후 [http://127.0.0.1:65003](http://127.0.0.1:65003)에서
+합성 미리보기를 실행하므로 개발 서버와 동시에 사용할 수 있다. 미리보기 종료는 Ctrl+C다.
 65002가 이미 사용 중이라면 [포트 점유 확인](docs/operations.md#vs-code-포트-충돌)을 참고한다.
 
 ## 문서 안내

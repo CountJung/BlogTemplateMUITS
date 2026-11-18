@@ -47,3 +47,4 @@ yarn-error.log*
 
 # Uploaded files
 /public/uploads/
+.next-standalone/

@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 export default [
-  { ignores: ['.next/**', 'node_modules/**', 'data/**', 'content/**', 'public/uploads/**', 'logs/**', 'next-env.d.ts'] },
+  { ignores: ['.next/**', '.next-standalone/**', 'node_modules/**', 'data/**', 'content/**', 'public/uploads/**', 'logs/**', 'next-env.d.ts'] },
   {
     files: ['**/*.{ts,tsx,cjs,mjs}'],
     languageOptions: { ecmaVersion: 'latest', globals: { ...globals.node, ...globals.browser } },

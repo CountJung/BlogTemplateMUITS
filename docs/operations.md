@@ -84,14 +84,29 @@ JSON 내용은 출력하지 않고 symlink를 따라가지 않으며 삭제·수
 전원 차단 시 디렉터리 메타데이터 내구성, 다중 호스트·NFS·백업 복구는 미검증 경계이며
 [TODO](TODO.md)에서 관리한다.
 
-빌드에서 변경 가능한 데이터·게시글·로그·첨부와 `.env`를 추적 자산에서 제외하므로,
-standalone 실행 시 저장소 경로와 비밀값을 별도로 제공해야 한다.
-`npm run build`는 Next.js 빌드 후 `scripts/check-standalone.cjs`를 실행한다.
-이 검사는 생성된 `.next/standalone` 안의 runtime 데이터·첨부·로그·`.env`만 제거하고,
+## 일반 운영 실행과 합성 standalone 검증
+
+`npm run build`는 일반 Next.js 산출물 `.next`를 만든다.
+이후 `npm start`는 프로젝트 루트에서 `next start -p 65002`를 실행하며,
+그 루트의 기존 환경 설정·게시글·데이터를 사용한다. 합성 미리보기가 아니다.
+개발 서버도 65002를 사용하므로 `npm run dev`와 `npm start`를 동시에 실행하지 않는다.
+운영 `.env`를 예제로 덮어쓰거나 실제 자격증명·데이터를 합성 검증에 복사하지 않는다.
+
+`npm run build:standalone`은 빌드 래퍼가 `BLOG_STANDALONE_BUILD=1`을 지정하여
+`.next-standalone`에 별도의 standalone 산출물을 만든 뒤 `scripts/check-standalone.cjs`를 실행한다.
+일반 빌드 래퍼는 이 플래그를 0으로 지정하므로 두 빌드의 산출물 위치가 분리된다.
+검사기는 생성된 `.next-standalone/standalone` 안의 runtime 데이터·첨부·로그·`.env`만 제거하고,
 프로젝트 원본 소스 폴더가 산출물에 없음을 확인한다. 원본 저장소 데이터는 삭제하지 않는다.
-산출물과 실행 검증은 [검증 기록](verification.md)을 확인한다.
-로컬 `npm start`는 별도 임시 폴더에 합성 데이터와 빌드 산출물을 준비하고 Next.js의 standalone
-`server.js`로 실행한다. Next.js의 `next start`나 운영 배포 명령을 의미하지 않는다.
+변경 가능한 데이터·게시글·로그·첨부와 `.env`는 추적 자산에서 제외하므로,
+standalone을 실제 배포한다면 저장 위치와 비밀값을 별도로 제공해야 한다. NAS 배포는 미검증이다.
+
+`npm run test:http`와 `npm run preview`는 먼저 `npm run build:standalone`이 필요하다.
+두 명령은 별도 임시 폴더에 standalone 산출물과 합성 데이터를 준비하고 `server.js`로 실행한다.
+HTTP 회귀는 임시 루프백 포트를 사용해 검사 후 종료한다.
+미리보기는 `127.0.0.1:65003`에서 Ctrl+C까지 유지한다.
+두 명령은 실제 Google 로그인·운영 계정·운영 자료 검증이나 운영 시작을 의미하지 않는다.
+산출물과 실행 검증 결과는 [검증 기록](verification.md)을 확인한다.
+
 npm 12가 차단한 esbuild 설치 스크립트는 별도 승인 없이 유지한다. Windows x64의 잠금 파일에 있는
 플랫폼 패키지로 이번 테스트를 실행했으며, 다른 OS·아키텍처 설치는 별도 확인 대상이다.
 
@@ -99,7 +114,7 @@ npm 12가 차단한 esbuild 설치 스크립트는 별도 승인 없이 유지�
 
 `EADDRINUSE`는 이미 다른 프로세스가 해당 주소를 사용 중이라는 뜻이다.
 `Debugger attached.`는 디버거 연결 메시지이며 포트 점유 오류가 아니다.
-개발 서버는 `127.0.0.1:65002`, 합성 미리보기는 `127.0.0.1:65003`에서 실행된다.
+개발 서버는 `127.0.0.1:65002`, 일반 `npm start`는 65002, 합성 미리보기는 `127.0.0.1:65003`을 사용한다.
 개발 서버는 VS Code F5 또는 터미널의 `npm run dev` 중 하나만 사용한다.
 Windows에서 점유자를 확인하려면 다음을 실행한다.
 

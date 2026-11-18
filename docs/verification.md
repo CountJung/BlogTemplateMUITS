@@ -383,3 +383,24 @@ Node.js 26.13.1/npm 12.2.3으로 빌드·standalone 패키징·타입·린트·�
 | DATA-002 | 조회수 API에 유효한 ID·실존 글·Origin 검사. 없는 글은 기록 파일을 생성하지 않고 정상 중복 조회 흐름 유지 |
 
 검증 범위는 위의 자동·로컬 HTTP 절차다. 실제 브라우저·Google OAuth·운영 반영 완료를 뜻하지 않는다.
+
+## 2026-11-18 운영 시작 명령 복원
+
+- `npm start`를 `next start -p 65002`로 복원하고 합성 실행은 `npm run preview`로 분리했다.
+- 일반 `npm run build`는 `.next`, `npm run build:standalone`은 `.next-standalone`을 생성한다.
+  일반 시작을 standalone 산출물에 연결하지 않는다. standalone 검증·미리보기의 내부 정적 자산 경로도
+  custom distDir에 맞췄다. 빌드 wrapper는 모드 환경값을 명시하고 standalone 빌드 후 기본 타입 선언을 보존한다.
+- `.next-standalone`은 Git·ESLint·일반 TypeScript 탐색에서 제외한다. 기존 저장소의 데이터·비밀값은 변경하지 않았다.
+- macOS arm64에서 공식 Node 배포본의 SHA-256을 확인하고 임시 폴더의 Node 26.13.1/npm 12.2.3으로 검증했다.
+  시스템 Node/npm 및 사용자 설정은 변경하지 않았다. `npm ci --ignore-scripts` 성공.
+- 단위 테스트 36개, lint, type-check, 일반 빌드, standalone 빌드와 패키징 검사 통과.
+  일반 `next start` 합성 HTTP 81개, standalone 합성 HTTP 81개 통과.
+  standalone 빌드 후 일반 HTTP 81개를 재실행하여 기존 `.next`의 동작도 확인했다.
+  두 빌드 메타데이터의 distDir/output 및 기본 `next-env.d.ts` 유지도 확인했다.
+- 합성 미리보기 `127.0.0.1:65003` 준비 및 SIGTERM 종료 코드 0 확인.
+  실제 OAuth·NAS·운영 데이터·실제 운영 포트 재시작은 실행하지 않았다.
+  일반 HTTP 검증은 임시 폴더의 합성 데이터와 임시 포트에서 `next start`를 실행한다.
+  `npm start`의 65002 매핑은 스크립트 계약 테스트로 확인하며 운영 포트를 점유하지 않는다.
+- 독립 리뷰에서 발견한 custom distDir 내부 경로와 생성물 lint 대상 문제를 수정했다.
+  새 문서의 상대 링크·Markdown 표 및 `git diff --check`를 제한적으로 검사했다.
+  docs-canon 원본 검사기 전체 검증을 수행한 것으로 해석하지 않는다.

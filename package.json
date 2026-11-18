@@ -4,14 +4,17 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 65002",
-    "build": "next build && node scripts/check-standalone.cjs",
-    "start": "node tests/http-smoke.cjs --preview",
+    "build": "node scripts/build.cjs",
+    "start": "next start -p 65002",
     "type-check": "tsc --noEmit",
     "test": "node --test tests/*.test.cjs",
     "test:http": "node tests/http-smoke.cjs",
     "lint": "eslint . --max-warnings=0",
     "attachments:inspect": "node scripts/inspect-attachments.cjs",
-    "storage:inspect": "node scripts/inspect-storage.cjs"
+    "storage:inspect": "node scripts/inspect-storage.cjs",
+    "build:standalone": "node scripts/build.cjs --standalone",
+    "preview": "node tests/http-smoke.cjs --preview",
+    "test:production": "node tests/http-smoke.cjs --production"
   },
   "keywords": [],
   "author": "",
