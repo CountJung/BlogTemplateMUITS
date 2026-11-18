@@ -143,7 +143,7 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
   
   if (!post) {
     return (
-      <Box textAlign="center" py={8}>
+      <Box sx={{ textAlign: 'center', py: 8 }}>
         <Typography variant="h4" gutterBottom>
           {t('postNotFound')}
         </Typography>
@@ -401,7 +401,7 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
                             >
                               {file.originalName}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block">
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                               {(file.size / 1024).toFixed(2)} KB · {new Date(file.uploadedAt).toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-US')}
                             </Typography>
                           </Box>

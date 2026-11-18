@@ -94,12 +94,14 @@ const HomePage: NextPage<HomePageProps> = ({
               placeholder={t('searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                },
               }}
               size="small"
             />
@@ -225,7 +227,7 @@ const HomePage: NextPage<HomePageProps> = ({
       )}
 
       {totalPages > 1 && (
-        <Stack spacing={2} alignItems="center" sx={{ mt: 4 }}>
+        <Stack spacing={2} sx={{ alignItems: 'center', mt: 4 }}>
           <Typography variant="body2" color="text.secondary">{t('totalPosts', { count: totalPosts })}</Typography>
           <Pagination count={totalPages} page={initialPage} onChange={handlePageChange}
             color="primary" size="large" showFirstButton showLastButton />

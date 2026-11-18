@@ -53,11 +53,11 @@ async function call(name, method, body = {}, query = {}, headers = {}) {
 }
 const input = id => ({ id, title: 'Synthetic post', content: 'Synthetic content', date: '2026-10-23', author: 'writer', authorEmail: 'writer@example.test', excerpt: 'summary', tags: ['test'], attachments: [] });
 
-after(() => {
+after(async () => {
   Module._load = originalLoad;
   process.chdir(originalCwd);
-  fs.rmSync(scratch, { recursive: true, force: true });
   for (const [key, value] of Object.entries(originalEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5 });
 });
 
 for (const endpoint of ['settings/system', 'settings/language']) {

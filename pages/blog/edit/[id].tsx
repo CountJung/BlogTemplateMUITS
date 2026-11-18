@@ -84,7 +84,7 @@ const EditPostPage: NextPage<EditPostPageProps> = ({ post }) => {
 
   if (!post) {
     return (
-      <Box textAlign="center" py={8}>
+      <Box sx={{ textAlign: 'center', py: 8 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
           {t('postNotFound')}
         </Alert>
@@ -164,7 +164,7 @@ const EditPostPage: NextPage<EditPostPageProps> = ({ post }) => {
 
   if (status === 'loading') {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
         <CircularProgress />
       </Box>
     );

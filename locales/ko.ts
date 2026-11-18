@@ -41,6 +41,7 @@ export const ko: Translations = {
     fileUpload: '파일 업로드',
     maxFiles: '최대 {count}개의 파일만 첨부할 수 있습니다.',
     comments: '댓글',
+    noComments: '아직 댓글이 없습니다.',
     writeComment: '댓글 작성',
     deleteComment: '댓글 삭제',
     loginRequired: '로그인이 필요합니다.',

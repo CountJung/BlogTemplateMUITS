@@ -18,7 +18,12 @@ Module._load = function(request, parent, isMain) {
 };
 const { authOptions } = require(path.join(root, 'pages/api/auth/[...nextauth].ts'));
 const { getAllUsers, updateUserRole, deleteUser } = require(path.join(root, 'lib/users.ts'));
-after(() => { Module._load = originalLoad; process.chdir(cwd); fs.rmSync(scratch, { recursive: true, force: true }); if (previousAdmin === undefined) delete process.env.ADMIN_EMAILS; else process.env.ADMIN_EMAILS = previousAdmin; });
+after(async () => {
+  Module._load = originalLoad;
+  process.chdir(cwd);
+  if (previousAdmin === undefined) delete process.env.ADMIN_EMAILS; else process.env.ADMIN_EMAILS = previousAdmin;
+  await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5 });
+});
 test('Google sign-in requires verified email', async () => {
   const args = { user: { email: 'synthetic@example.test' }, account: { provider: 'google' } };
   assert.equal(await authOptions.callbacks.signIn({ ...args, profile: { email_verified: false } }), false);

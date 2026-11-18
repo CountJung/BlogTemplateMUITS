@@ -109,7 +109,7 @@ const SettingsPage: NextPage = () => {
               onChange={(e) => setScheduler({ ...scheduler, hour: Number(e.target.value) })}
               fullWidth
               margin="normal"
-              inputProps={{ min: 0, max: 23 }}
+              slotProps={{ htmlInput: { min: 0, max: 23 } }}
             />
             <TextField
               label={t('settingsPage.minute')}
@@ -118,7 +118,7 @@ const SettingsPage: NextPage = () => {
               onChange={(e) => setScheduler({ ...scheduler, minute: Number(e.target.value) })}
               fullWidth
               margin="normal"
-              inputProps={{ min: 0, max: 59 }}
+              slotProps={{ htmlInput: { min: 0, max: 59 } }}
             />
             <TextField
               label={t('settingsPage.second')}
@@ -127,7 +127,7 @@ const SettingsPage: NextPage = () => {
               onChange={(e) => setScheduler({ ...scheduler, second: Number(e.target.value) })}
               fullWidth
               margin="normal"
-              inputProps={{ min: 0, max: 59 }}
+              slotProps={{ htmlInput: { min: 0, max: 59 } }}
             />
           </Box>
 

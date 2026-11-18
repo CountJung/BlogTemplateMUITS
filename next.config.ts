@@ -3,6 +3,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  agentRules: false, // The repository owns its AGENTS.md.
   output: 'standalone', // Docker 배포를 위한 standalone 빌드
   // Mutable storage and secrets are supplied at runtime, never packaged as traced assets.
   outputFileTracingExcludes: {

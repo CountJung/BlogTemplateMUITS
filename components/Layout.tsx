@@ -16,6 +16,7 @@ import {
   Drawer,
   List,
   ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Divider,
@@ -138,13 +139,13 @@ const Header: React.FC = () => {
               anchor="right"
               open={mobileDrawerOpen}
               onClose={toggleMobileDrawer}
-              PaperProps={{
-                sx: { width: 280 }
+              slotProps={{
+                paper: { sx: { width: 280 } },
               }}
             >
               <Box sx={{ p: 2 }}>
                 <Typography variant="h6" component="div" color="primary">
-                  주일설교 자료실
+                  {t('blogTitle')}
                 </Typography>
               </Box>
               <Divider />
@@ -174,27 +175,22 @@ const Header: React.FC = () => {
               
               <List>
                 {menuItems.map((item) => (
-                  <ListItem
-                    key={item.href}
-                    onClick={() => {
-                      setMobileDrawerOpen(false);
-                      router.push(item.href);
-                    }}
-                    sx={{
-                      cursor: 'pointer',
-                      backgroundColor: isActive(item.href) ? 'action.selected' : 'transparent',
-                      '&:hover': {
-                        backgroundColor: 'action.hover',
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ color: isActive(item.href) ? 'primary.main' : 'inherit' }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={item.label}
-                      sx={{ color: isActive(item.href) ? 'primary.main' : 'inherit' }}
-                    />
+                  <ListItem key={item.href} disablePadding>
+                    <ListItemButton
+                      component={Link}
+                      href={item.href}
+                      onClick={() => setMobileDrawerOpen(false)}
+                      selected={isActive(item.href)}
+                      aria-current={isActive(item.href) ? 'page' : undefined}
+                    >
+                      <ListItemIcon sx={{ color: isActive(item.href) ? 'primary.main' : 'inherit' }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        sx={{ color: isActive(item.href) ? 'primary.main' : 'inherit' }}
+                      />
+                    </ListItemButton>
                   </ListItem>
                 ))}
                 
@@ -219,11 +215,13 @@ const Header: React.FC = () => {
                         sx={{ color: isActive('/settings') ? 'primary.main' : 'inherit' }}
                       />
                     </ListItem> */}
-                    <ListItem onClick={handleLogout} sx={{ cursor: 'pointer' }}>
-                      <ListItemIcon>
-                        <LogoutIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="로그아웃" />
+                    <ListItem disablePadding>
+                      <ListItemButton component="button" onClick={handleLogout}>
+                        <ListItemIcon>
+                          <LogoutIcon />
+                        </ListItemIcon>
+                        <ListItemText primary={t('logout')} />
+                      </ListItemButton>
                     </ListItem>
                   </>
                 )}

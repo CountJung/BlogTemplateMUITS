@@ -186,7 +186,7 @@ const AdminLogsPage: NextPage = () => {
         <Box sx={{ flexGrow: 1, width: { xs: '100%', md: 'auto' } }}>
           <Paper sx={{ height: '70vh', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
-              <Typography variant="subtitle1" fontWeight="bold">
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                 {selectedFile || t('adminLogs.selectLog')}
               </Typography>
             </Box>

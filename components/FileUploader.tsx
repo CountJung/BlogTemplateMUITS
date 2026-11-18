@@ -211,7 +211,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       {uploading && (
         <Box sx={{ mt: 2 }}>
           <LinearProgress variant="determinate" value={uploadProgress} />
-          <Typography variant="caption" align="center" display="block" sx={{ mt: 0.5 }}>
+          <Typography variant="caption" align="center" sx={{ display: 'block', mt: 0.5 }}>
             {t('loading')}... {Math.round(uploadProgress)}%
           </Typography>
         </Box>

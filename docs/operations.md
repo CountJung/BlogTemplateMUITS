@@ -18,7 +18,7 @@ flowchart LR
     Lib --> Logs[logs 기록]
 ```
 
-설치·실행 명령은 [README](../README.md)에서 확인한다. 현재 Node.js 조건은 `^22.13.0 || >=24.0.0`이다.
+설치·실행 명령과 이 프로젝트의 Node.js/npm 버전은 [README](../README.md)에서 확인한다.
 Google OAuth의 로컬 콜백은 `http://localhost:65002/api/auth/callback/google`이다.
 운영에서는 실제 HTTPS 주소를 사용하고 `NEXTAUTH_URL`과 OAuth 리디렉션을 일치시킨다.
 
@@ -90,6 +90,10 @@ standalone 실행 시 저장소 경로와 비밀값을 별도로 제공해야 �
 이 검사는 생성된 `.next/standalone` 안의 runtime 데이터·첨부·로그·`.env`만 제거하고,
 프로젝트 원본 소스 폴더가 산출물에 없음을 확인한다. 원본 저장소 데이터는 삭제하지 않는다.
 산출물과 실행 검증은 [검증 기록](verification.md)을 확인한다.
+로컬 `npm start`는 별도 임시 폴더에 합성 데이터와 빌드 산출물을 준비하고 Next.js의 standalone
+`server.js`로 실행한다. Next.js의 `next start`나 운영 배포 명령을 의미하지 않는다.
+npm 12가 차단한 esbuild 설치 스크립트는 별도 승인 없이 유지한다. Windows x64의 잠금 파일에 있는
+플랫폼 패키지로 이번 테스트를 실행했으며, 다른 OS·아키텍처 설치는 별도 확인 대상이다.
 
 ## VS Code 포트 충돌
 

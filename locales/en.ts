@@ -41,6 +41,7 @@ export const en: Translations = {
     fileUpload: 'File Upload',
     maxFiles: 'You can attach up to {count} files.',
     comments: 'Comments',
+    noComments: 'No comments yet.',
     writeComment: 'Write Comment',
     deleteComment: 'Delete Comment',
     loginRequired: 'Login required.',

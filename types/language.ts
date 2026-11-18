@@ -41,6 +41,7 @@ export interface Translations {
     fileUpload: string;
     maxFiles: string;
     comments: string;
+    noComments: string;
     writeComment: string;
     deleteComment: string;
     loginRequired: string;

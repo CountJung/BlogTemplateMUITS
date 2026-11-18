@@ -5,27 +5,30 @@ Next.js Pages Router, Material UI, NextAuth Google OAuth를 사용하는 파일 
 
 ## 시작하기
 
-Node.js 22.13 이상인 22.x 또는 24 이상을 사용한다. 의존성 버전 정본은
-[package-lock.json](package-lock.json), 실행 명령 정본은 [package.json](package.json)이다.
+이 프로젝트의 로컬 기준은 Node.js 26.13.1 LTS와 npm 12.2.3이다.
+Volta는 프로젝트 안에서 [package.json](package.json)의 고정 버전을 사용한다.
+Volta가 없다면 같은 버전을 설치한다. 의존성 잠금 기준은 [package-lock.json](package-lock.json)이다.
 
-```bash
-npm ci
-cp .env.example .env.local
-# .env.local에 로컬 OAuth 설정과 NEXTAUTH_SECRET을 입력한다.
-npm run dev
+```powershell
+npm.cmd ci
+npm.cmd run dev
 ```
 
-기본 개발 주소는 http://localhost:65002 이다. `NEXTAUTH_URL`과 Google OAuth 콜백도
-같은 로컬 주소를 사용한다. 운영 자격증명이나 데이터를 로컬 검증에 복사하지 않는다.
+개발 주소는 [http://localhost:65002](http://localhost:65002)이며 루프백에만 바인딩한다.
+기존 설정을 덮어쓰지 않는다. 실제 로컬 Google 로그인이 필요할 때만 `.env.example`을
+참고해 개발용 OAuth 값과 `NEXTAUTH_SECRET`을 설정한다. `NEXTAUTH_URL`과 콜백 주소는 같은 호스트를 사용한다.
+운영 자격증명이나 데이터를 로컬 검증에 복사하지 않는다.
 
-```bash
-npm run type-check
-npm run lint
-npm test
-npm run build
-npm run test:http
-npm start
+```powershell
+npm.cmd run type-check
+npm.cmd run lint
+npm.cmd test
+npm.cmd run build
+npm.cmd run test:http
+npm.cmd start
 ```
+
+Windows 외 환경에서는 `npm`을 사용한다.
 
 실행 결과와 미검증 조건은 [검증 기록](docs/verification.md)을 확인한다.
 배포 전 결정과 외부 설정 작업은 [TODO](docs/TODO.md)에 남긴다.

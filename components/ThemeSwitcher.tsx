@@ -54,6 +54,7 @@ const ThemeSwitcher: React.FC = () => {
     <Box>
       <Tooltip title={getTooltipText()}>
         <IconButton
+          id="theme-button"
           onClick={handleClick}
           color="inherit"
           aria-label={t('changeTheme')}
@@ -70,8 +71,8 @@ const ThemeSwitcher: React.FC = () => {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
-        MenuListProps={{
-          'aria-labelledby': 'theme-button',
+        slotProps={{
+          list: { 'aria-labelledby': 'theme-button' },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}

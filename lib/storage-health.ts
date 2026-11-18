@@ -12,7 +12,7 @@ export function inspectStorage(root = process.cwd()) {
       if (stat.isSymbolicLink()) { result.symlinks.push(relative); return; }
       if (relative === 'data/.write-lock') result.locked = true;
       if (stat.isDirectory()) {
-        for (const name of fs.readdirSync(/* turbopackIgnore: true */ file)) visit(path.join(relative, name));
+        for (const name of fs.readdirSync(/* turbopackIgnore: true */ file)) visit(path.posix.join(relative, name));
         return;
       }
       if (relative.endsWith('.tmp')) result.temporaryFiles.push(relative);

@@ -133,7 +133,7 @@ const CreatePostPage: NextPage = () => {
 
   if (status === 'loading') {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -146,7 +146,7 @@ const CreatePostPage: NextPage = () => {
   // 글쓰기 권한이 없는 경우
   if (session.permissions && !session.permissions.canWrite) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
         <Alert severity="warning">
           글쓰기 권한이 없습니다. 관리자에게 문의하세요.
         </Alert>

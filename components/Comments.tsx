@@ -247,7 +247,7 @@ const Comments: React.FC<CommentsProps> = ({ postId }) => {
       ) : comments.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="body1" color="text.secondary">
-            아직 댓글이 없습니다. 첫 댓글을 작성해보세요!
+            {t('noComments')}
           </Typography>
         </Box>
       ) : (
@@ -265,7 +265,7 @@ const Comments: React.FC<CommentsProps> = ({ postId }) => {
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                     <Box>
-                      <Typography variant="subtitle2" fontWeight="bold">
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                         {comment.author}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">

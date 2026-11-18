@@ -12,7 +12,10 @@ const users = require(path.join(root, 'lib/users.ts'));
 const comments = require(path.join(root, 'lib/comments.ts'));
 const posts = require(path.join(root, 'lib/posts.ts'));
 const views = require(path.join(root, 'lib/views.ts'));
-after(() => { process.chdir(cwd); fs.rmSync(scratch, { recursive: true, force: true }); });
+after(async () => {
+  process.chdir(cwd);
+  await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5 });
+});
 async function concurrent(action, count = 20, workers = 4) {
   const children = Array.from({ length: workers }, () => fork(path.join(root, 'tests/helpers/store-worker.cjs'), [], { env: { ...process.env, BLOG_STORE_TEST_DIRECTORY: scratch }, stdio: ['ignore', 'ignore', 'pipe', 'ipc'] }));
   try {
