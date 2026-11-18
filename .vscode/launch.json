@@ -2,23 +2,32 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Next.js: Server",
-      "type": "node-terminal",
+      "name": "Next.js: Full Stack",
+      "type": "node",
       "request": "launch",
-      "command": "npm run dev"
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "cwd": "${workspaceFolder}",
+      "args": ["dev", "--hostname", "127.0.0.1", "--port", "65002"],
+      "console": "internalConsole",
+      "outputCapture": "std",
+      "autoAttachChildProcesses": true,
+      "serverReadyAction": {
+        "pattern": "Ready in ",
+        "uriFormat": "http://localhost:65002",
+        "action": "debugWithChrome",
+        "webRoot": "${workspaceFolder}",
+        "killOnServerStop": true
+      }
     },
     {
-      "name": "Next.js: Client (Chrome)",
-      "type": "chrome",
+      "name": "Next.js: Server",
+      "type": "node",
       "request": "launch",
-      "url": "http://localhost:65002",
-      "webRoot": "${workspaceFolder}"
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Next.js: Full Stack",
-      "configurations": ["Next.js: Server", "Next.js: Client (Chrome)"]
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "cwd": "${workspaceFolder}",
+      "args": ["dev", "--hostname", "127.0.0.1", "--port", "65002"],
+      "console": "internalConsole",
+      "autoAttachChildProcesses": true
     }
   ]
 }

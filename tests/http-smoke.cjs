@@ -9,8 +9,30 @@ const { once } = require('node:events');
 const root = path.resolve(__dirname, '..');
 const { encode } = require(path.join(root, 'node_modules/next-auth/jwt'));
 const matter = require(path.join(root, 'node_modules/gray-matter'));
+const LOOPBACK = '127.0.0.1';
+const PREVIEW_PORT = 65003;
+
+async function selectPort(preview) {
+  const listener = net.createServer();
+  const listening = once(listener, 'listening');
+  listener.listen(preview ? PREVIEW_PORT : 0, LOOPBACK);
+  try {
+    await listening;
+  } catch (error) {
+    if (preview && error.code === 'EADDRINUSE') {
+      throw new Error(`Preview port ${LOOPBACK}:${PREVIEW_PORT} is already in use. Stop the existing preview or process yourself; it was not stopped.`, { cause: error });
+    }
+    throw error;
+  }
+  const { port } = listener.address();
+  await new Promise(resolve => listener.close(resolve));
+  return port;
+}
 
 async function main() {
+  const preview = process.argv.includes('--preview');
+  assert.ok(fs.existsSync(path.join(root, '.next/standalone/server.js')), 'Run npm run build first.');
+  const previewPort = preview ? await selectPort(true) : null;
   const runtime = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-http-'));
   let child;
   let output = '';
@@ -36,27 +58,52 @@ async function main() {
     // Harmless local fixtures, not a reproduction of the advisory's bypass payload.
     fs.writeFileSync(path.join(runtime, 'public/optimizer-fixture.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="red"/></svg>');
     fs.writeFileSync(path.join(runtime, 'public/optimizer-fixture.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64'));
-    const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening');
-    const port = listener.address().port; await new Promise(resolve => listener.close(resolve));
-    const origin = `http://127.0.0.1:${port}`;
+    const port = previewPort ?? await selectPort(false);
+    const origin = `http://${LOOPBACK}:${port}`;
     const secret = 'synthetic-local-http-test-secret-with-no-real-account';
-    child = spawn(process.execPath, [path.join(runtime, 'server.js')], { cwd: runtime, env: { ...process.env,
-      NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: String(port), NEXTAUTH_URL: origin, NEXTAUTH_SECRET: secret,
-      ADMIN_EMAILS: 'admin@example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic', NEXT_TELEMETRY_DISABLED: '1', RATE_LIMIT_VIEW_MAX: '4', RATE_LIMIT_UPLOAD_MAX: '4', RATE_LIMIT_POST_WRITE_MAX: '3', RATE_LIMIT_COMMENT_WRITE_MAX: '1', RATE_LIMIT_COMMENT_READ_MAX: '1', RATE_LIMIT_FILE_MAX: '2', TRUST_PROXY_HOPS: '0', __NEXT_SHOW_IGNORE_LISTED: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const rateLimits = {
+      RATE_LIMIT_VIEW_MAX: '4', RATE_LIMIT_UPLOAD_MAX: '4', RATE_LIMIT_POST_WRITE_MAX: '3',
+      RATE_LIMIT_COMMENT_WRITE_MAX: '1', RATE_LIMIT_COMMENT_READ_MAX: '1', RATE_LIMIT_FILE_MAX: '2',
+    };
+    const runtimeEnv = { ...process.env };
+    for (const key of Object.keys(runtimeEnv)) {
+      if (key.startsWith('RATE_LIMIT_')) delete runtimeEnv[key];
+    }
+    child = spawn(process.execPath, [path.join(runtime, 'server.js')], { cwd: runtime, env: { ...runtimeEnv,
+      NODE_ENV: 'production', HOSTNAME: LOOPBACK, PORT: String(port), NEXTAUTH_URL: origin, NEXTAUTH_SECRET: secret,
+      ADMIN_EMAILS: 'admin@example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic',
+      NEXT_TELEMETRY_DISABLED: '1', ...(!preview ? rateLimits : {}), TRUST_PROXY_HOPS: '0', __NEXT_SHOW_IGNORE_LISTED: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.on('data', data => { output += data; }); child.stderr.on('data', data => { output += data; });
     let ready = false;
     for (let i = 0; i < 100; i++) {
-      try { const response = await fetch(origin + '/api/settings/language'); if (response.status === 200) { ready = true; break; } } catch { /* Server may still be starting. */ }
-      if (child.exitCode !== null) throw new Error(`Standalone server exited (${child.exitCode}): ${output}`);
+      try { const response = await fetch(origin + '/api/settings/language', { signal: AbortSignal.timeout(1000) }); if (response.status === 200) { ready = true; break; } } catch { /* Server may still be starting. */ }
+      if (child.exitCode !== null || child.signalCode !== null) throw new Error(`Standalone server exited (${child.exitCode ?? child.signalCode}): ${output}`);
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     assert.ok(ready, output.slice(0, 3000));
+    if (preview) {
+      console.log(`Synthetic local preview: ${origin} (Ctrl+C to stop; no real accounts or data)`);
+      await Promise.race([
+        new Promise(resolve => { process.once('SIGTERM', resolve); process.once('SIGINT', resolve); }),
+        once(child, 'exit').then(([code, signal]) => {
+          throw new Error(`Preview server exited unexpectedly (${code ?? signal})`);
+        }),
+      ]);
+      return;
+    }
     const cookies = {};
     for (const name of ['admin', 'writer', 'reader', 'other', 'banned']) cookies[name] = `next-auth.session-token=${await encode({ secret, token: { email: `${name}@example.test`, name, sub: name } })}`;
-    const request = async (route, { user, method = 'GET', body, foreign = false, multipart, forwarded } = {}) => fetch(origin + route, {
-      method, headers: { ...(forwarded ? { 'X-Forwarded-For': forwarded } : {}), ...(user ? { Cookie: cookies[user] } : {}), ...(method !== 'GET' ? { Origin: foreign ? 'https://foreign.example.test' : origin } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
-      body: multipart || (body === undefined ? undefined : JSON.stringify(body)), redirect: 'manual',
-    });
+    const request = async (route, { user, method = 'GET', body, foreign = false, multipart, forwarded } = {}) => {
+      try {
+        return await fetch(origin + route, {
+          // Keep assertions independent of pooled-connection reuse, including responses whose bodies are not read.
+          method, headers: { Connection: 'close', ...(forwarded ? { 'X-Forwarded-For': forwarded } : {}), ...(user ? { Cookie: cookies[user] } : {}), ...(method !== 'GET' ? { Origin: foreign ? 'https://foreign.example.test' : origin } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+          body: multipart || (body === undefined ? undefined : JSON.stringify(body)), redirect: 'manual', signal: AbortSignal.timeout(15000),
+        });
+      } catch (error) {
+        throw new Error(`Synthetic request failed: ${method} ${route}`, { cause: error });
+      }
+    };
     const rejectedSvg = await request('/_next/image?url=%2Foptimizer-fixture.svg&w=64&q=75');
     check(rejectedSvg.status, 400);
     assert.match(await rejectedSvg.text(), /not allowed/i); checks++;
@@ -76,6 +123,9 @@ async function main() {
     const home = await request('/'); const html = await home.text();
     assert.equal(home.status, 200, output.slice(0, 4000)); checks++; check(home.headers.get('x-frame-options'), 'DENY'); check(home.headers.get('x-content-type-options'), 'nosniff');
     assert.match(home.headers.get('content-security-policy'), /frame-ancestors 'none'/); checks++;
+    const script = html.match(/<script[^>]+src="(\/_next\/static\/[^"]+\.js)"/)?.[1];
+    assert.ok(script, 'Home should reference a standalone JavaScript asset'); checks++;
+    check((await request(script)).status, 200);
     const data = JSON.parse(html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s)[1]).props.pageProps;
     check(data.posts.length, 10); check(data.totalPosts, 23); check(/authorEmail|content|attachments/.test(JSON.stringify(data)), false);
     const page2 = await (await request('/?page=2')).text();
@@ -134,13 +184,12 @@ async function main() {
     check((await request('/api/delete-post?id=created-http', { method: 'DELETE', user: 'writer' })).status, 200);
     check((await request('/api/posts', { method: 'POST', body: { ...posted, id: 'rate-limited-http' }, user: 'writer' })).status, 429);
     console.log(`HTTP smoke passed: ${checks} assertions; isolated standalone runtime; 23 synthetic posts; real signed local sessions and multipart requests.`);
-    if (process.argv.includes('--preview')) {
-      console.log(`Synthetic UI preview: ${origin}`);
-      await new Promise(resolve => { process.once('SIGTERM', resolve); process.once('SIGINT', resolve); });
-    }
+  } catch (error) {
+    if (output) console.error(output.slice(-4000));
+    throw error;
   } finally {
-    if (child && child.exitCode === null) { child.kill('SIGTERM'); await once(child, 'exit'); }
-    fs.rmSync(runtime, { recursive: true, force: true });
+    if (child && child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); await once(child, 'exit'); }
+    await fs.promises.rm(runtime, { recursive: true, force: true, maxRetries: 5 });
   }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

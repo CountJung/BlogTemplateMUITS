@@ -91,6 +91,22 @@ standalone 실행 시 저장소 경로와 비밀값을 별도로 제공해야 �
 프로젝트 원본 소스 폴더가 산출물에 없음을 확인한다. 원본 저장소 데이터는 삭제하지 않는다.
 산출물과 실행 검증은 [검증 기록](verification.md)을 확인한다.
 
+## VS Code 포트 충돌
+
+`EADDRINUSE`는 이미 다른 프로세스가 해당 주소를 사용 중이라는 뜻이다.
+`Debugger attached.`는 디버거 연결 메시지이며 포트 점유 오류가 아니다.
+개발 서버는 `127.0.0.1:65002`, 합성 미리보기는 `127.0.0.1:65003`에서 실행된다.
+개발 서버는 VS Code F5 또는 터미널의 `npm run dev` 중 하나만 사용한다.
+Windows에서 점유자를 확인하려면 다음을 실행한다.
+
+```powershell
+Get-NetTCPConnection -LocalPort 65002,65003 -State Listen -ErrorAction SilentlyContinue |
+  Select-Object LocalAddress, LocalPort, OwningProcess
+```
+
+본인이 시작한 서버임을 확인한 뒤 원래 실행한 터미널에서 Ctrl+C 또는 VS Code 디버깅 중지로 종료한다.
+자동 포트 변경이나 다른 프로세스의 강제 종료는 하지 않는다. 포트를 그대로 두어 Google OAuth 콜백을 유지한다.
+
 ## 권한 계약
 
 공개 게시글과 첨부를 읽을 수 있다는 사실만으로 접근 통제 결함으로 판정하지 않는다.

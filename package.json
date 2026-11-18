@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev -p 65002",
+    "dev": "next dev --hostname 127.0.0.1 --port 65002",
     "build": "next build && node scripts/check-standalone.cjs",
-    "start": "next start -p 65002",
+    "start": "node tests/http-smoke.cjs --preview",
     "type-check": "tsc --noEmit",
     "test": "node --test tests/*.test.cjs",
     "test:http": "node tests/http-smoke.cjs",

@@ -30,6 +30,18 @@ npm start
 실행 결과와 미검증 조건은 [검증 기록](docs/verification.md)을 확인한다.
 배포 전 결정과 외부 설정 작업은 [TODO](docs/TODO.md)에 남긴다.
 
+## VS Code 디버깅
+
+저장소 폴더를 VS Code에서 열고 실행 및 디버그에서 **Next.js: Full Stack**을 선택한 뒤 F5를 누른다.
+개발 서버가 준비된 뒤 Chrome이 열리며, 디버깅을 중지하면 Chrome 디버그 세션도 종료된다.
+브라우저 없이 서버만 디버깅하려면 **Next.js: Server**를 선택한다.
+F5 전에 이 프로젝트의 `npm run dev`를 따로 실행하지 않는다.
+
+개발 및 로컬 Google OAuth는 [http://localhost:65002](http://localhost:65002)를 그대로 사용한다.
+`npm start`는 빌드 후 [http://127.0.0.1:65003](http://127.0.0.1:65003)에서
+별도 합성 미리보기를 실행하므로 개발 서버와 동시에 사용할 수 있다. 미리보기 종료는 Ctrl+C다.
+65002가 이미 사용 중이라면 [포트 점유 확인](docs/operations.md#vs-code-포트-충돌)을 참고한다.
+
 ## 문서 안내
 
 - [문서 등록부·에이전트 지침](AGENTS.md)
