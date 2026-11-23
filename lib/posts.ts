@@ -7,12 +7,6 @@ import { BlogPost, PostFormData, PostSaveResult } from '../types/blog';
 
 const postsDirectory = path.join(process.cwd(), 'content', 'posts');
 
-interface PostPathParams {
-  params: {
-    id: string;
-  };
-}
-
 // 날짜 기반 폴더 경로 생성 (YYYY/MM/DD)
 function getDateBasedPath(date: string): string {
   const [year, month, day] = date.split('-');
@@ -168,24 +162,6 @@ export function incrementViews(id: string): PostSaveResult {
     console.error('Error incrementing views:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
-
-// 모든 게시글 ID 가져오기 (getStaticPaths용)
-export function getAllPostIds(): PostPathParams[] {
-  if (!fs.existsSync(/* turbopackIgnore: true */ postsDirectory)) {
-    return [];
-  }
-
-  const fileNames = findAllMarkdownFiles(postsDirectory).map(file => path.basename(file));
-  return fileNames
-    .filter(name => name.endsWith('.md'))
-    .map((fileName): PostPathParams => {
-      return {
-        params: {
-          id: fileName.replace(/\.md$/, ''),
-        },
-      };
-    });
 }
 
 // 게시글 검색

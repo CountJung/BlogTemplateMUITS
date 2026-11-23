@@ -33,11 +33,16 @@ async function main() {
   const preview = process.argv.includes('--preview');
   const production = process.argv.includes('--production');
   assert.ok(fs.existsSync(path.join(root, production ? '.next/BUILD_ID' : '.next-standalone/standalone/server.js')), production ? 'Run npm run build first.' : 'Run npm run build:standalone first.');
+  const dist = production ? '.next' : '.next-standalone';
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, dist, 'prerender-manifest.json'), 'utf8'));
+  assert.ok(manifest.dynamicRoutes['/blog/[id]'], 'Expected the blog detail ISR route');
+  assert.deepEqual(Object.keys(manifest.routes).filter(route => route.startsWith('/blog/')), [],
+    'Build must not generate concrete blog detail routes');
   const previewPort = preview ? await selectPort(true) : null;
   const runtime = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-http-'));
   let child;
   let output = '';
-  let checks = 0;
+  let checks = 2;
   const check = (actual, expected) => { assert.equal(actual, expected); checks++; };
   try {
     if (production) {
@@ -149,7 +154,14 @@ async function main() {
     const limited = await request('/api/posts/missing/view', { method: 'POST', forwarded: '203.0.113.2' });
     check(limited.status, 429); check(Number(limited.headers.get('retry-after')) > 0, true);
     check(limited.headers.get('cache-control').includes('no-store'), true);
-    const detail = await request('/blog/synthetic-0'); check(detail.status, 200); check((await detail.text()).includes('authorEmail'), false);
+    const detail = await request('/blog/synthetic-0'); check(detail.status, 200);
+    const detailHtml = await detail.text();
+    check(detailHtml.includes('unique_0_end'), true);
+    check(detailHtml.includes('authorEmail'), false);
+    const warmDetail = await request('/blog/synthetic-0');
+    check(warmDetail.status, 200);
+    check(warmDetail.headers.get('x-nextjs-cache'), 'HIT');
+    await warmDetail.text();
     check((await request('/blog/edit/synthetic-0')).status, 307);
     check((await request('/blog/edit/synthetic-0', { user: 'other' })).status, 404);
     check((await request('/blog/edit/synthetic-0', { user: 'writer' })).status, 200);
@@ -191,6 +203,34 @@ async function main() {
     check((await request('/api/posts', { method: 'POST', body: posted, user: 'other' })).status, 409);
     check((await request('/api/delete-post?id=created-http', { method: 'DELETE', user: 'writer' })).status, 200);
     check((await request('/api/posts', { method: 'POST', body: { ...posted, id: 'rate-limited-http' }, user: 'writer' })).status, 429);
+    const isrPost = { ...posted, id: 'isr-lifecycle', content: 'isr_original_fixture' };
+    const isrRoute = `/blog/${isrPost.id}`;
+    const missingDetail = await request(isrRoute);
+    check(missingDetail.status, 404);
+    await missingDetail.text();
+    async function expectDetailEventually(status, marker) {
+      const deadline = Date.now() + 25000;
+      let result;
+      do {
+        const response = await request(isrRoute);
+        const body = await response.text();
+        result = { status: response.status, matched: marker === undefined || body.includes(marker) };
+        if (result.status === status && result.matched) {
+          checks++;
+          return;
+        }
+        // Time-based ISR can return a stale response on the first request after expiry.
+        await new Promise(resolve => setTimeout(resolve, 250));
+      } while (Date.now() < deadline);
+      assert.fail(`Expected ISR ${isrRoute} to return ${status} with ${marker ?? 'no required content'}; last response: ${JSON.stringify(result)}`);
+    }
+    check((await request('/api/posts', { method: 'POST', body: isrPost, user: 'admin' })).status, 201);
+    await expectDetailEventually(200, 'isr_original_fixture');
+    const editedIsrPost = { ...isrPost, content: 'isr_edited_fixture' };
+    check((await request(`/api/posts/${isrPost.id}`, { method: 'PUT', body: editedIsrPost, user: 'admin' })).status, 200);
+    await expectDetailEventually(200, 'isr_edited_fixture');
+    check((await request(`/api/delete-post?id=${isrPost.id}`, { method: 'DELETE', user: 'admin' })).status, 200);
+    await expectDetailEventually(404);
     console.log(`HTTP smoke passed: ${checks} assertions; isolated ${production ? 'production next start' : 'standalone'} runtime; 23 synthetic posts; real signed local sessions and multipart requests.`);
   } catch (error) {
     if (output) console.error(output.slice(-4000));

@@ -25,7 +25,7 @@ Module._load = function(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 const load = file => require(path.join(root, file));
-const { savePost, getPostById, getAllPostIds, deletePost } = load('lib/posts.ts');
+const { savePost, getPostById, getAllPosts, deletePost } = load('lib/posts.ts');
 const { createOrUpdateUser, updateUserRole } = load('lib/users.ts');
 const { getPublicPostPage, toPublicPost } = load('lib/public-posts.ts');
 const { resolveUpload, validatedUploadExtension } = load('lib/uploads.ts');
@@ -97,7 +97,7 @@ test('exact ID lookup cannot alias a suffix and recursive IDs include dated post
   assert.equal(savePost(input('prefix-suffix')).success, true);
   assert.equal(getPostById('suffix'), null);
   assert.equal(getPostById('../owned'), null);
-  assert.ok(getAllPostIds().some(item => item.params.id === 'prefix-suffix'));
+  assert.ok(getAllPosts().some(item => item.id === 'prefix-suffix'));
 });
 test('edit/delete forbid nonauthor, downgraded author and banned author despite stale session flags', async () => {
   const body = { ...input('owned'), title: 'Updated', authorEmail: 'spoof@example.test' };

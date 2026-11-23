@@ -33,7 +33,7 @@ import { useSession } from 'next-auth/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { getAllPostIds, getPostById } from '../../lib/posts';
+import { getPostById } from '../../lib/posts';
 import { BlogDetailPageProps } from '../../types/blog';
 import Comments from '../../components/Comments';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -572,25 +572,19 @@ const BlogPostPage: NextPage<BlogDetailPageProps> = ({ post }) => {
   );
 };
 
-// getStaticPaths: 빌드 시점에 생성할 페이지 경로들을 지정
-export const getStaticPaths: GetStaticPaths = async () => {
-  const paths = getAllPostIds();
-  
-  return {
-    paths,
-    // fallback: 'blocking'으로 변경하여 빌드 후 생성된 게시글도 접근 가능하도록 함
-    fallback: 'blocking',
-  };
-};
+// Operational Markdown belongs to the server at runtime, not to build artifacts.
+export const getStaticPaths: GetStaticPaths = async () => ({ paths: [], fallback: 'blocking' });
 
-// getStaticProps: 빌드 시점에 데이터를 가져옴
-// revalidate를 추가하여 ISR(Incremental Static Regeneration) 활성화
+const DETAIL_REVALIDATE_SECONDS = 10;
+
 export const getStaticProps: GetStaticProps<BlogDetailPageProps> = async ({ params }) => {
   const post = getPostById(params?.id as string);
   
   if (!post) {
     return {
       notFound: true,
+      // A post published after a prior 404 must be discoverable without a rebuild.
+      revalidate: DETAIL_REVALIDATE_SECONDS,
     };
   }
   
@@ -598,8 +592,7 @@ export const getStaticProps: GetStaticProps<BlogDetailPageProps> = async ({ para
     props: {
       post: toPublicPost(post),
     },
-    // 10초마다 페이지를 재생성 (필요에 따라 조정 가능)
-    revalidate: 10,
+    revalidate: DETAIL_REVALIDATE_SECONDS,
   };
 };
 

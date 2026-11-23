@@ -39,7 +39,7 @@ test('concurrent processes preserve every acknowledged user, comment, view and c
 test('global post IDs remain unique across dates under concurrent creation', async () => {
   const results = await concurrent('duplicate', 1, 4);
   assert.equal(results.reduce((a, b) => a + b, 0), 1);
-  assert.equal(posts.getAllPostIds().filter(item => item.params.id === 'duplicate').length, 1);
+  assert.equal(posts.getAllPosts().filter(item => item.id === 'duplicate').length, 1);
 });
 
 test('failed atomic replacement leaves the original file intact and releases the lock', () => {
